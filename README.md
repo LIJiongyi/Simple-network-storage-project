@@ -1,1 +1,1 @@
-# SimSimple-network-storage-project
+# Simple-network-storage-project
