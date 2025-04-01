@@ -1,4 +1,15 @@
-import 
+from api_user import (
+    register_user, 
+    login_user, 
+    reset_password, 
+    upload_file, 
+    download_file, 
+    edit_file, 
+    delete_file, 
+    share_file, 
+    view_logs, 
+    get_otp
+)
 
 def user_cli():
     while True:
@@ -47,3 +58,7 @@ def user_cli():
                 print("Unable, Try again")
         except IndexError:
             print("Wrong Grammar, Try again")
+
+
+if __name__ == "__main__":
+    user_cli()
