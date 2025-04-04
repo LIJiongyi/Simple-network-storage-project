@@ -1,3 +1,6 @@
+# This file simulates the phone
+
+
 import socket
 import json
 import threading
@@ -8,7 +11,7 @@ from datetime import datetime
 
 # Server settings
 PHONE_HOST = 'localhost'
-PHONE_PORT = 8888
+PHONE_PORT = 8888   # listening to port 8888 same as in api_user.py
 
 # OTP storage
 otp_storage = {}
@@ -105,11 +108,23 @@ def main():
         
         # Main thread wait, display waiting message
         log_message("OTP receiver started, waiting for verification codes...")
+        log_message("Type 'exit', 'quit', or 'stop' to shut down the receiver")
+        
+        # Check for exit command
         while True:
-            # Keep main thread running
-            time.sleep(10)
+            try:
+                # Set small timeout to avoid blocking indefinitely
+                user_input = input()
+                if user_input.lower() in ['exit', 'quit', 'stop']:
+                    log_message("Shutting down OTP receiver...")
+                    break
+            except EOFError:
+                # Handle case when running in non-interactive environment
+                time.sleep(10)
             
     except KeyboardInterrupt:
+        pass
+    finally:
         log_message("OTP receiver closed")
         sys.exit(0)
 

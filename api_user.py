@@ -1,4 +1,4 @@
-# Description: api from user_interface.py
+# Description: api for user_interface.py
 
 
 
@@ -120,7 +120,7 @@ def get_otp(username):
         result = c.fetchone()
         conn.close()
         if result:
-            totp = pyotp.TOTP(result[0])
+            totp = pyotp.TOTP(result[0]) # 核心函数,作用很大
             return totp.now()
         else:
             print(f"用户 {username} 未找到")
@@ -131,8 +131,8 @@ def get_otp(username):
     
 def send_otp_to_phone(username, otp):
     try:
-        phone = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-        phone.connect(('localhost', 8888))
+        phone = socket.socket(socket.AF_INET, socket.SOCK_STREAM) # ipv4
+        phone.connect(('localhost', 8888))  # port 8888
         message = {'username': username, 'otp': otp}
         phone.send(json.dumps(message).encode())
         # ...处理响应...
