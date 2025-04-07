@@ -10,7 +10,8 @@ from api_user import (
     delete_file, 
     share_file, 
     view_logs, 
-    get_otp
+    get_otp,
+    send_otp_to_phone
 )
 
 def user_cli():
@@ -33,12 +34,46 @@ def user_cli():
         try:
             if parts[0] == "register_user":
                 register_user(parts[1], parts[2])
+            # 在user_interface.py中修改登录部分
             elif parts[0] == "login_user":
-                otp = get_otp(parts[1])
-                if otp:
-                    login_user(parts[1], parts[2], otp)
+                if len(parts) < 3:
+                    print("格式错误: login_user [username] [password]")
+                    continue
+    
+                username = parts[1]
+                password = parts[2]
+    
+                # 生成OTP验证码
+                otp = get_otp(username) # otp是已经生成的验证码
+                if not otp:
+                    print(f"Cannot generate OTP for {username}")
+                    continue
+    
+                # 发送OTP到模拟手机
+                print(f"sending OTP to {username}")
+                send_result = send_otp_to_phone(username, otp) # 这里接收的是是否成功发送
+    
+                if not send_result:
+                    print("make sure the phone is running")
+                    continue
+        
+                print("Sent")
+    
+                # 提示用户输入验证码
+                user_input_otp = input("请输入收到的验证码: ").strip()
+    
+                # 验证用户输入的OTP
+                if user_input_otp != otp:
+                    print("验证码错误，登录失败")
+                    continue
+    
+                # 验证通过，执行登录
+                login_result = login_user(username, password, user_input_otp)
+    
+                if login_result.get("status") == "success":
+                   print(f"用户 {username} 登录成功!")
                 else:
-                    print("Cannot get OTP")
+                    print(f"登录失败: {login_result.get('message', '未知错误')}")
             elif parts[0] == "reset_password":
                 reset_password(parts[1], parts[2], parts[3])
             elif parts[0] == "upload":

@@ -120,7 +120,7 @@ def get_otp(username):
         result = c.fetchone()
         conn.close()
         if result:
-            totp = pyotp.TOTP(result[0]) # 核心函数,作用很大
+            totp = pyotp.TOTP(result[0], interval=300) # 核心函数,作用很大
             return totp.now()
         else:
             print(f"用户 {username} 未找到")
@@ -139,8 +139,6 @@ def send_otp_to_phone(username, otp):
     except Exception as e:
         print(f"发送OTP到手机错误: {e}")
         return False
-
-
 
 if __name__ == "__main__":
     print("开始自动化测试...")

@@ -22,7 +22,7 @@ def log_message(message):
     timestamp = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
     print(f"[{timestamp}] {message}")
 
-def receive_otp():
+def receive_otp(): # 绑定端口并且监听, 接受连接请求
     """Start server to listen for OTP from clients"""
     server = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
     server.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
@@ -43,7 +43,7 @@ def receive_otp():
     finally:
         server.close()
 
-def handle_client(client_socket, addr):
+def handle_client(client_socket, addr): # 处理单个客户端连接
     """Handle client connection and OTP receiving"""
     try:
         # Receive message
@@ -68,7 +68,7 @@ def handle_client(client_socket, addr):
                     
                     # Display received OTP
                     log_message(f"Received OTP for user {username}: {otp}")
-                    log_message(f"OTP valid for: 30 seconds")
+                    log_message(f"OTP valid for: 5 mins")
                     new_otp_received.set()
                 else:
                     response = {'status': 'error', 'message': 'Invalid message format'}
@@ -81,7 +81,7 @@ def handle_client(client_socket, addr):
     finally:
         client_socket.close()
 
-def send_sample_otp():
+def send_sample_otp():  # 发送测试验证码
     """Client test function to manually send test OTP"""
     try:
         username = input("Enter username: ")
