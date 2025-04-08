@@ -13,6 +13,7 @@ import pyotp
 import sqlite3
 import os
 import re
+import time
 
 # 项目根目录和数据库路径
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
@@ -70,7 +71,7 @@ def sanitize_filename(filename): # 用来防止路径遍历攻击
     base_filename = os.path.basename(filename)
     safe_filename = re.sub(r'[^\w\.-]', '_', base_filename)
     if not safe_filename or safe_filename in ['.', '..'] or safe_filename.startswith('.'):
-        raise ValueError(f"不安全的文件名: {filename}")
+        raise ValueError(f"unsafe: {filename}")
         
     return safe_filename
 
@@ -100,19 +101,20 @@ def download_file(username, filename):
 '''
 
 def derive_encryption_key(username, password="file_encryption_key"):
-    """从用户名和密码派生加密密钥"""
     salt = username.encode()  # 使用用户名作为盐
     key = PBKDF2(password, salt, dkLen=32, count=1000, hmac_hash_module=SHA256)
     return key
 
 def upload_file(username, filename, file_content):
     try:
-        # 验证和清理文件名
         safe_filename = sanitize_filename(filename)
         
         # 如果原始文件名被修改，通知用户
         if safe_filename != filename:
             print(f"注意：文件名已更改为安全版本 '{safe_filename}'")
+        
+        # 检测文件类型
+        _, file_extension = os.path.splitext(safe_filename)
         
         # 获取加密密钥
         key = derive_encryption_key(username)
@@ -120,17 +122,35 @@ def upload_file(username, filename, file_content):
         # 生成随机nonce
         nonce = get_random_bytes(12)  # AES-GCM推荐12字节nonce
         
-        # 创建AES-GCM加密器
         cipher = AES.new(key, AES.MODE_GCM, nonce=nonce)
         
+        # 准备文件元数据
+        file_metadata = {
+            "original_filename": safe_filename,
+            "file_type": file_extension.lstrip('.').lower(),
+            "timestamp": time.time()
+        }
+        
+        # 将文件内容转换为字节格式（处理字符串或字节）
+        if isinstance(file_content, str):
+            # 如果是字符串（文本文件），进行编码
+            file_bytes = file_content.encode('utf-8')
+        else:
+            # 如果已经是字节格式（二进制文件），直接使用
+            file_bytes = file_content
+            
+        # 添加元数据到验证数据
+        associated_data = json.dumps(file_metadata).encode()
+        
         # 加密文件内容
-        ciphertext, tag = cipher.encrypt_and_digest(file_content.encode())
+        ciphertext, tag = cipher.encrypt_and_digest(file_bytes)
         
         # 准备加密元数据
         encrypted_package = {
             "ciphertext": base64.b64encode(ciphertext).decode(),
             "nonce": base64.b64encode(nonce).decode(),
-            "tag": base64.b64encode(tag).decode()
+            "tag": base64.b64encode(tag).decode(),
+            "metadata": file_metadata
         }
         
         # 将加密数据打包为JSON字符串，并进行base64编码以便传输
@@ -153,66 +173,74 @@ def download_file(username, filename):
         # 验证和清理文件名
         safe_filename = sanitize_filename(filename)
         
-        # 如果原始文件名被修改，通知用户
         if safe_filename != filename:
-            print(f"注意：文件名已更改为安全版本 '{safe_filename}'")
+            print(f"safe filename: '{safe_filename}'")
         
-        # 发送下载请求
         request = {"action": "download", "username": username, "filename": safe_filename}
         response = send_request(request)
         
         if response.get("status") == "success":
-            # 解析加密数据包
             encrypted_package = json.loads(base64.b64decode(response["data"]).decode())
             
-            # 提取加密组件
+            # aes正在加密
             ciphertext = base64.b64decode(encrypted_package["ciphertext"])
             nonce = base64.b64decode(encrypted_package["nonce"])
             tag = base64.b64decode(encrypted_package["tag"])
+            file_metadata = encrypted_package.get("metadata", {})
             
-            # 获取解密密钥
             key = derive_encryption_key(username)
-            
-            # 创建解密器
             cipher = AES.new(key, AES.MODE_GCM, nonce=nonce)
             
-            # 解密文件内容
+            # 准备关联数据（如果存在）
+            associated_data = json.dumps(file_metadata).encode() if file_metadata else None
+            
             try:
-                plaintext = cipher.decrypt_and_verify(ciphertext, tag)
-                decrypted_content = plaintext.decode()
-                print(f"{username} 下载 {safe_filename} 内容: {decrypted_content}")
-                return {"status": "success", "data": decrypted_content}
+                decrypted_bytes = cipher.decrypt_and_verify(ciphertext, tag)
+                
+                # 处理文件类型
+                file_type = file_metadata.get("file_type", "").lower() if file_metadata else ""
+                
+                # 文本文件类型列表
+                text_file_types = ['txt', 'md', 'py', 'java', 'c', 'cpp', 'js', 'html', 'css', 'xml', 'json']
+                
+                # 这里我将文件分类处理了
+                if file_type in text_file_types:
+                    decrypted_content = decrypted_bytes.decode('utf-8')
+                    print(f"{username} download {safe_filename} content: {decrypted_content[:100]}...")
+                    return {"status": "success", "data": decrypted_content, "binary": False}
+                else:
+                    # 二进制文件，保持字节格式
+                    print(f"{username} download {safe_filename} (binary file, {len(decrypted_bytes)} bytes)")
+                    return {"status": "success", "data": base64.b64encode(decrypted_bytes).decode(), "binary": True}
+                    
             except ValueError as e:
                 print(f"文件验证失败: {e}")
                 return {"status": "error", "message": "文件可能被篡改"}
         
         # 处理下载失败
-        print(f"{username} 下载 {safe_filename}: {response}")
+        print(f"{username} download {safe_filename}: {response}")
         return response
     except ValueError as e:
-        print(f"下载错误: {e}")
+        print(f"wrong download result: {e}")
         return {"status": "error", "message": str(e)}
     except Exception as e:
-        print(f"解密或下载错误: {e}")
+        print(f"error: {e}")
         return {"status": "error", "message": str(e)}
 
 def edit_file(username, filename, new_content):
-    """编辑文件"""
     new_data = base64.b64encode(new_content.encode()).decode()
     request = {"action": "edit_file", "username": username, "filename": filename, "data": new_data}
     response = send_request(request)
-    print(f"{username} 编辑 {filename}: {response}")
+    print(f"{username} edit {filename}: {response}")
     return response
 
 def delete_file(username, filename):
-    """删除文件"""
     request = {"action": "delete_file", "username": username, "filename": filename}
     response = send_request(request)
-    print(f"{username} 删除 {filename}: {response}")
+    print(f"{username} delete {filename}: {response}")
     return response
 
 def share_file(username, filename, share_with):
-    """分享文件"""
     request = {"action": "share", "username": username, "filename": filename, "share_with": share_with}
     response = send_request(request)
     print(f"{username} 分享 {filename} 给 {share_with}: {response}")
@@ -229,7 +257,6 @@ def view_logs(admin_username):
     return response
 
 def get_otp(username):
-    """get OTP"""
     try:
         conn = sqlite3.connect(DB_PATH)
         c = conn.cursor()
@@ -240,10 +267,10 @@ def get_otp(username):
             totp = pyotp.TOTP(result[0], interval=300) # 核心函数,作用很大
             return totp.now()
         else:
-            print(f"用户 {username} 未找到")
+            print(f"user {username} not found")
             return None
     except Exception as e:
-        print("获取 OTP 错误:", e)
+        print("wrong OTP:", e)
         return None
     
 def send_otp_to_phone(username, otp):
@@ -254,7 +281,7 @@ def send_otp_to_phone(username, otp):
         phone.send(json.dumps(message).encode())
         # ...处理响应...
     except Exception as e:
-        print(f"发送OTP到手机错误: {e}")
+        print(f"error: {e}")
         return False
 
 if __name__ == "__main__":
@@ -322,4 +349,4 @@ if __name__ == "__main__":
     print("自动化测试完成")
 
     # start CLI
-    user_cli()
+    # user_cli()
