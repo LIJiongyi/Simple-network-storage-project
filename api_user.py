@@ -1,7 +1,10 @@
-# Description: api for user_interface.py
+# Description: general & security related api for user_interface.py
 
 
-
+from Crypto.Cipher import AES
+from Crypto.Random import get_random_bytes
+from Crypto.Protocol.KDF import PBKDF2
+from Crypto.Hash import SHA256
 import socket
 import json
 import base64
@@ -9,6 +12,7 @@ import hashlib
 import pyotp
 import sqlite3
 import os
+import re
 
 # 项目根目录和数据库路径
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
@@ -61,6 +65,18 @@ def reset_password(username, old_password, new_password):
     print(f"重置 {username} 密码: {response}")
     return response
 
+
+def sanitize_filename(filename): # 用来防止路径遍历攻击
+    base_filename = os.path.basename(filename)
+    safe_filename = re.sub(r'[^\w\.-]', '_', base_filename)
+    if not safe_filename or safe_filename in ['.', '..'] or safe_filename.startswith('.'):
+        raise ValueError(f"不安全的文件名: {filename}")
+        
+    return safe_filename
+
+# I commented out the original upload_file and download_file functions
+# to avoid confusion with the new ones that include path traversal protection.如果成功运行这些注释可删掉
+'''
 def upload_file(username, filename, file_content):
     """上传文件"""
     encrypted_data = base64.b64encode(file_content.encode()).decode()
@@ -68,7 +84,10 @@ def upload_file(username, filename, file_content):
     response = send_request(request)
     print(f"{username} 上传 {filename}: {response}")
     return response
+'''
 
+
+'''
 def download_file(username, filename):
     """下载文件"""
     request = {"action": "download", "username": username, "filename": filename}
@@ -78,6 +97,104 @@ def download_file(username, filename):
         print(f"{username} 下载 {filename} 内容: {file_content}")
     print(f"{username} 下载 {filename}: {response}")
     return response
+'''
+
+def derive_encryption_key(username, password="file_encryption_key"):
+    """从用户名和密码派生加密密钥"""
+    salt = username.encode()  # 使用用户名作为盐
+    key = PBKDF2(password, salt, dkLen=32, count=1000, hmac_hash_module=SHA256)
+    return key
+
+def upload_file(username, filename, file_content):
+    try:
+        # 验证和清理文件名
+        safe_filename = sanitize_filename(filename)
+        
+        # 如果原始文件名被修改，通知用户
+        if safe_filename != filename:
+            print(f"注意：文件名已更改为安全版本 '{safe_filename}'")
+        
+        # 获取加密密钥
+        key = derive_encryption_key(username)
+        
+        # 生成随机nonce
+        nonce = get_random_bytes(12)  # AES-GCM推荐12字节nonce
+        
+        # 创建AES-GCM加密器
+        cipher = AES.new(key, AES.MODE_GCM, nonce=nonce)
+        
+        # 加密文件内容
+        ciphertext, tag = cipher.encrypt_and_digest(file_content.encode())
+        
+        # 准备加密元数据
+        encrypted_package = {
+            "ciphertext": base64.b64encode(ciphertext).decode(),
+            "nonce": base64.b64encode(nonce).decode(),
+            "tag": base64.b64encode(tag).decode()
+        }
+        
+        # 将加密数据打包为JSON字符串，并进行base64编码以便传输
+        encrypted_data = base64.b64encode(json.dumps(encrypted_package).encode()).decode()
+        
+        # 发送请求
+        request = {"action": "upload", "username": username, "filename": safe_filename, "data": encrypted_data}
+        response = send_request(request)
+        print(f"{username} 上传 {safe_filename}: {response}")
+        return response
+    except ValueError as e:
+        print(f"上传错误: {e}")
+        return {"status": "error", "message": str(e)}
+    except Exception as e:
+        print(f"加密或上传错误: {e}")
+        return {"status": "error", "message": str(e)}
+
+def download_file(username, filename):
+    try:
+        # 验证和清理文件名
+        safe_filename = sanitize_filename(filename)
+        
+        # 如果原始文件名被修改，通知用户
+        if safe_filename != filename:
+            print(f"注意：文件名已更改为安全版本 '{safe_filename}'")
+        
+        # 发送下载请求
+        request = {"action": "download", "username": username, "filename": safe_filename}
+        response = send_request(request)
+        
+        if response.get("status") == "success":
+            # 解析加密数据包
+            encrypted_package = json.loads(base64.b64decode(response["data"]).decode())
+            
+            # 提取加密组件
+            ciphertext = base64.b64decode(encrypted_package["ciphertext"])
+            nonce = base64.b64decode(encrypted_package["nonce"])
+            tag = base64.b64decode(encrypted_package["tag"])
+            
+            # 获取解密密钥
+            key = derive_encryption_key(username)
+            
+            # 创建解密器
+            cipher = AES.new(key, AES.MODE_GCM, nonce=nonce)
+            
+            # 解密文件内容
+            try:
+                plaintext = cipher.decrypt_and_verify(ciphertext, tag)
+                decrypted_content = plaintext.decode()
+                print(f"{username} 下载 {safe_filename} 内容: {decrypted_content}")
+                return {"status": "success", "data": decrypted_content}
+            except ValueError as e:
+                print(f"文件验证失败: {e}")
+                return {"status": "error", "message": "文件可能被篡改"}
+        
+        # 处理下载失败
+        print(f"{username} 下载 {safe_filename}: {response}")
+        return response
+    except ValueError as e:
+        print(f"下载错误: {e}")
+        return {"status": "error", "message": str(e)}
+    except Exception as e:
+        print(f"解密或下载错误: {e}")
+        return {"status": "error", "message": str(e)}
 
 def edit_file(username, filename, new_content):
     """编辑文件"""

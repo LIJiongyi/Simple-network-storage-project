@@ -60,11 +60,11 @@ def user_cli():
                 print("Sent")
     
                 # 提示用户输入验证码
-                user_input_otp = input("请输入收到的验证码: ").strip()
+                user_input_otp = input("Please input OTP: ").strip()
     
                 # 验证用户输入的OTP
                 if user_input_otp != otp:
-                    print("验证码错误，登录失败")
+                    print("Wrong OTP, please try again.")
                     continue
     
                 # 验证通过，执行登录
