@@ -27,7 +27,7 @@ def log_action(username, action):
         print(f"Log error: {e}")
     finally:
         conn.close()
-
+'''
 def handle_register(request):
     """处理用户注册请求"""
     username = request["username"]
@@ -49,6 +49,10 @@ def handle_register(request):
     finally:
         conn.close()
 
+
+'''
+
+'''
 def handle_login(request):
     """处理用户登录请求，验证密码和 OTP"""
     username = request["username"]
@@ -70,6 +74,11 @@ def handle_login(request):
         return {"status": "error", "message": str(e)}
     finally:
         conn.close()
+
+'''
+
+
+
 
 def handle_reset_password(request):
     """处理密码重置请求"""
