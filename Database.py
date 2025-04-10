@@ -5,12 +5,9 @@ import secrets
 import datetime
 
 
-def initialize_database():
-
-    # Create database directory if it doesn't exist
-    # database file path
-    print("start database initialization")
-    if os.path.exists('storage.db'):
+def initialize_database(reset=False):
+    # Only remove if reset flag is True
+    if reset and os.path.exists('storage.db'):
         print("Removing existing database...")
         os.remove('storage.db')
 
