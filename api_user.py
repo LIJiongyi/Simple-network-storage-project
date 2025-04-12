@@ -23,6 +23,7 @@ DB_PATH = os.path.join(BASE_DIR, 'storage.db')
 HOST = 'localhost'
 PORT = 9999
 
+
 def send_request(request):
     """发送请求到服务器并接收响应"""
     try:
@@ -36,21 +37,27 @@ def send_request(request):
         print("通信错误:", e)
         return {"status": "error", "message": str(e)}
 
+
 def register_user(username, password):
     """注册用户"""
     password_hash = hashlib.sha256(password.encode()).hexdigest()
-    request = {"action": "register", "username": username, "password_hash": password_hash} # 将password改为password_hash
+    request = {"action": "register", "username": username, "password_hash": password_hash}  # 将password改为password_hash
     response = send_request(request)
     print(f"注册 {username}: {response}")
     return response
 
+
 def login_user(username, password, otp):
     """用户登录"""
     password_hash = hashlib.sha256(password.encode()).hexdigest()
-    request = {"action": "login", "username": username, "password": password_hash, "otp": otp}
+    request = {"action": "login",
+               "username": username,
+               "password_hash": password_hash,
+               "otp_code": otp}
     response = send_request(request)
     print(f"登录 {username}: {response}")
     return response
+
 
 def reset_password(username, old_password, new_password):
     """重置密码"""
@@ -59,21 +66,22 @@ def reset_password(username, old_password, new_password):
     request = {
         "action": "reset_password",
         "username": username,
-        "old_password": old_password_hash,
-        "new_password": new_password_hash
+        "old_password_hash": old_password_hash,
+        "new_password_hash": new_password_hash
     }
     response = send_request(request)
     print(f"重置 {username} 密码: {response}")
     return response
 
 
-def sanitize_filename(filename): # 用来防止路径遍历攻击
+def sanitize_filename(filename):  # 用来防止路径遍历攻击
     base_filename = os.path.basename(filename)
     safe_filename = re.sub(r'[^\w\.-]', '_', base_filename)
     if not safe_filename or safe_filename in ['.', '..'] or safe_filename.startswith('.'):
         raise ValueError(f"unsafe: {filename}")
-        
+
     return safe_filename
+
 
 # I commented out the original upload_file and download_file functions
 # to avoid confusion with the new ones that include path traversal protection.如果成功运行这些注释可删掉
@@ -87,7 +95,6 @@ def upload_file(username, filename, file_content):
     return response
 '''
 
-
 '''
 def download_file(username, filename):
     """下载文件"""
@@ -100,132 +107,182 @@ def download_file(username, filename):
     return response
 '''
 
+
 def derive_encryption_key(username, password="file_encryption_key"):
     salt = username.encode()  # 使用用户名作为盐
     key = PBKDF2(password, salt, dkLen=32, count=1000, hmac_hash_module=SHA256)
     return key
 
-def upload_file(username, filename, file_content):
+
+def upload_file(username, filename, file_content=None, file_path=None):
     try:
+        # Sanitize the filename for security
         safe_filename = sanitize_filename(filename)
         
-        # 如果原始文件名被修改，通知用户
+        # If original filename was modified, notify user
         if safe_filename != filename:
-            print(f"注意：文件名已更改为安全版本 '{safe_filename}'")
-        
-        # 检测文件类型
+            print(f"Note: Filename was changed to safe version '{safe_filename}'")
+            
+        # Handle file content from either direct content or file path
+        if file_content is None and file_path is not None:
+            # Validate file_path to prevent directory traversal attacks
+            if not os.path.exists(file_path):
+                return {"status": "error", "message": f"File not found: {file_path}"}
+            
+            # Check if file path is within allowed directories
+            abs_path = os.path.abspath(file_path)
+            
+            try:
+                # Read file content from the specified path
+                with open(abs_path, 'rb') as f:
+                    file_bytes = f.read()
+            except (IOError, PermissionError) as e:
+                return {"status": "error", "message": f"Cannot read file: {str(e)}"}
+        elif isinstance(file_content, str):
+            # If content provided as string, encode to bytes
+            file_bytes = file_content.encode('utf-8')
+        elif file_content is not None:
+            # If content already in bytes, use directly
+            file_bytes = file_content
+        else:
+            return {"status": "error", "message": "No file content or valid file path provided"}
+            
+        # Get file extension for metadata
         _, file_extension = os.path.splitext(safe_filename)
-        
-        # 获取加密密钥
+
+        # Get encryption key
         key = derive_encryption_key(username)
-        
-        # 生成随机nonce
-        nonce = get_random_bytes(12)  # AES-GCM推荐12字节nonce
-        
+
+        # Generate random nonce
+        nonce = get_random_bytes(12)  # AES-GCM recommended 12-byte nonce
+
         cipher = AES.new(key, AES.MODE_GCM, nonce=nonce)
-        
-        # 准备文件元数据
+
+        # Prepare file metadata
         file_metadata = {
             "original_filename": safe_filename,
             "file_type": file_extension.lstrip('.').lower(),
             "timestamp": time.time()
         }
-        
-        # 将文件内容转换为字节格式（处理字符串或字节）
-        if isinstance(file_content, str):
-            # 如果是字符串（文本文件），进行编码
-            file_bytes = file_content.encode('utf-8')
-        else:
-            # 如果已经是字节格式（二进制文件），直接使用
-            file_bytes = file_content
-            
-        # 添加元数据到验证数据
+
+        # Add metadata to verification data
         associated_data = json.dumps(file_metadata).encode()
-        
-        # 加密文件内容
+
+        # Encrypt file content
         ciphertext, tag = cipher.encrypt_and_digest(file_bytes)
-        
-        # 准备加密元数据
+
+        # Prepare encrypted metadata
         encrypted_package = {
             "ciphertext": base64.b64encode(ciphertext).decode(),
             "nonce": base64.b64encode(nonce).decode(),
             "tag": base64.b64encode(tag).decode(),
             "metadata": file_metadata
         }
-        
-        # 将加密数据打包为JSON字符串，并进行base64编码以便传输
+
+        # Package encrypted data as JSON and encode for transmission
         encrypted_data = base64.b64encode(json.dumps(encrypted_package).encode()).decode()
-        
-        # 发送请求
-        request = {"action": "upload", "username": username, "filename": safe_filename, "data": encrypted_data}
+
+        # Send request
+        request = {"action": "upload_file", "username": username, "filename": safe_filename, "data": encrypted_data}
         response = send_request(request)
-        print(f"{username} 上传 {safe_filename}: {response}")
+        print(f"{username} uploaded {safe_filename}: {response}")
         return response
     except ValueError as e:
-        print(f"上传错误: {e}")
+        print(f"Upload error: {e}")
         return {"status": "error", "message": str(e)}
     except Exception as e:
-        print(f"加密或上传错误: {e}")
+        print(f"Encryption or upload error: {e}")
         return {"status": "error", "message": str(e)}
 
-def download_file(username, filename):
+
+def download_file(username, filename_or_id):
     try:
-        # 验证和清理文件名
-        safe_filename = sanitize_filename(filename)
+        # 检查输入是否为数字ID
+        is_file_id = isinstance(filename_or_id, int) or (isinstance(filename_or_id, str) and filename_or_id.isdigit())
         
-        if safe_filename != filename:
-            print(f"safe filename: '{safe_filename}'")
-        
-        request = {"action": "download", "username": username, "filename": safe_filename}
+        if is_file_id:
+            # 直接使用文件ID下载
+            file_id = filename_or_id
+            request = {"action": "download_file", "username": username, "file_id": file_id}
+        else:
+            # 通过文件名下载 - 先获取文件ID
+            safe_filename = sanitize_filename(filename_or_id)
+            
+            if safe_filename != filename_or_id:
+                print(f"安全文件名: '{safe_filename}'")
+            
+            # 先获取文件列表，查找对应文件ID
+            list_request = {"action": "list_files", "username": username}
+            list_response = send_request(list_request)
+            
+            if list_response.get("status") != "success":
+                return list_response  # 返回列表获取错误
+            
+            # 在自己的文件和共享文件中搜索
+            file_id = None
+            for file in list_response.get("files", []):
+                if file.get("filename") == safe_filename or file.get("original_filename") == safe_filename:
+                    file_id = file.get("file_id")
+                    break
+            
+            if file_id is None:
+                return {"status": "error", "message": f"找不到文件: {safe_filename}"}
+            
+            # 使用找到的文件ID下载
+            request = {"action": "download_file", "username": username, "file_id": file_id}
+
+        # 发送下载请求
         response = send_request(request)
-        
+
         if response.get("status") == "success":
             encrypted_package = json.loads(base64.b64decode(response["data"]).decode())
-            
-            # aes正在加密
+
+            # AES解密
             ciphertext = base64.b64decode(encrypted_package["ciphertext"])
             nonce = base64.b64decode(encrypted_package["nonce"])
             tag = base64.b64decode(encrypted_package["tag"])
             file_metadata = encrypted_package.get("metadata", {})
-            
+
             key = derive_encryption_key(username)
             cipher = AES.new(key, AES.MODE_GCM, nonce=nonce)
-            
+
             # 准备关联数据（如果存在）
             associated_data = json.dumps(file_metadata).encode() if file_metadata else None
-            
+
             try:
                 decrypted_bytes = cipher.decrypt_and_verify(ciphertext, tag)
-                
+
                 # 处理文件类型
                 file_type = file_metadata.get("file_type", "").lower() if file_metadata else ""
-                
+                display_filename = file_metadata.get("original_filename", "downloaded_file")
+
                 # 文本文件类型列表
                 text_file_types = ['txt', 'md', 'py', 'java', 'c', 'cpp', 'js', 'html', 'css', 'xml', 'json']
-                
-                # 这里我将文件分类处理了
+
+                # 根据文件类型处理
                 if file_type in text_file_types:
                     decrypted_content = decrypted_bytes.decode('utf-8')
-                    print(f"{username} download {safe_filename} content: {decrypted_content[:100]}...")
+                    print(f"{username} download {display_filename} 内容: {decrypted_content[:100]}...")
                     return {"status": "success", "data": decrypted_content, "binary": False}
                 else:
                     # 二进制文件，保持字节格式
-                    print(f"{username} download {safe_filename} (binary file, {len(decrypted_bytes)} bytes)")
+                    print(f"{username} download {display_filename} (二进制文件, {len(decrypted_bytes)} 字节)")
                     return {"status": "success", "data": base64.b64encode(decrypted_bytes).decode(), "binary": True}
-                    
+
             except ValueError as e:
                 print(f"文件验证失败: {e}")
                 return {"status": "error", "message": "文件可能被篡改"}
-        
+
         # 处理下载失败
-        print(f"{username} download {safe_filename}: {response}")
+        print(f"{username} download file: {response}")
         return response
     except ValueError as e:
-        print(f"wrong download result: {e}")
+        print(f"下载错误: {e}")
         return {"status": "error", "message": str(e)}
     except Exception as e:
-        print(f"error: {e}")
+        print(f"意外错误: {e}")
         return {"status": "error", "message": str(e)}
+
 
 def edit_file(username, filename, new_content):
     new_data = base64.b64encode(new_content.encode()).decode()
@@ -234,17 +291,20 @@ def edit_file(username, filename, new_content):
     print(f"{username} edit {filename}: {response}")
     return response
 
+
 def delete_file(username, filename):
     request = {"action": "delete_file", "username": username, "filename": filename}
     response = send_request(request)
     print(f"{username} delete {filename}: {response}")
     return response
 
+
 def share_file(username, filename, share_with):
     request = {"action": "share", "username": username, "filename": filename, "share_with": share_with}
     response = send_request(request)
     print(f"{username} 分享 {filename} 给 {share_with}: {response}")
     return response
+
 
 def view_logs(admin_username):
     """管理员查看日志"""
@@ -256,6 +316,7 @@ def view_logs(admin_username):
         print(f"管理员 {admin_username} 查看日志: {response}")
     return response
 
+
 def get_otp(username):
     try:
         conn = sqlite3.connect(DB_PATH)
@@ -264,7 +325,7 @@ def get_otp(username):
         result = c.fetchone()
         conn.close()
         if result:
-            totp = pyotp.TOTP(result[0], interval=300) # 核心函数,作用很大
+            totp = pyotp.TOTP(result[0], interval=300)  # 核心函数,作用很大
             return totp.now()
         else:
             print(f"user {username} not found")
@@ -272,17 +333,30 @@ def get_otp(username):
     except Exception as e:
         print("wrong OTP:", e)
         return None
-    
+
+
 def send_otp_to_phone(username, otp):
     try:
-        phone = socket.socket(socket.AF_INET, socket.SOCK_STREAM) # ipv4
-        phone.connect(('localhost', 8888))  # port 8888
-        message = {'username': username, 'otp': otp}
+        phone = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+        phone.settimeout(5)  # Add timeout to prevent hanging
+        phone.connect(('localhost', 8888))
+        message = {'username': username, 'otp_secret': otp}
         phone.send(json.dumps(message).encode())
-        # ...处理响应...
-    except Exception as e:
-        print(f"error: {e}")
+        response = phone.recv(1024).decode()  # Get response from OTP server
+        phone.close()
+
+        # Parse response to check success
+        try:
+            response_data = json.loads(response)
+            if response_data.get('status') == 'success':
+                return True
+        except:
+            pass
         return False
+    except Exception as e:
+        print(f"Error sending OTP: {e}")
+        return False
+
 
 if __name__ == "__main__":
     print("开始自动化测试...")

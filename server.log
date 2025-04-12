@@ -9,3 +9,6 @@
 2025-04-12 08:04:22,787 - SecureStorage - INFO - Server started on localhost:9999
 2025-04-12 08:04:57,721 - SecureStorage - INFO - New connection from ('127.0.0.1', 52777)
 2025-04-12 08:04:57,747 - SecureStorage - INFO - Action logged: user_register by user 2
+2025-04-12 21:41:15,385 - SecureStorage - INFO - Server started on localhost:9999
+2025-04-12 21:47:28,148 - SecureStorage - INFO - Server started on localhost:9999
+2025-04-12 21:49:57,255 - SecureStorage - INFO - New connection from ('127.0.0.1', 55317)

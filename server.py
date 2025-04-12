@@ -282,11 +282,10 @@ def handle_register(request, ip_address=None):
 
         # Insert new user
         cursor.execute("""
-            INSERT INTO users 
-            (username, password_hash, salt, creation_date, last_login) 
-            VALUES (?, ?, ?, ?, ?)
-        """, (username, final_password_hash, salt, datetime.datetime.now(), None))
-
+    INSERT INTO users 
+    (username, password_hash, salt, creation_date, last_login, otp_secret) 
+    VALUES (?, ?, ?, ?, ?, ?)
+""", (username, final_password_hash, salt, datetime.datetime.now(), None, otp_secret))
         user_id = cursor.lastrowid
         conn.commit()
 
@@ -374,7 +373,7 @@ def handle_login(request, ip_address=None):
         # Verify OTP if provided
         if otp_code:
             otp_secret = user['otp_secret']
-            totp = pyotp.TOTP(otp_secret)
+            totp = pyotp.TOTP(otp_secret,interval=300)
             if not totp.verify(otp_code):
                 # Increment failed login attempts
                 if username in failed_logins:
@@ -423,10 +422,9 @@ def handle_reset_password(request, ip_address=None):
     """
     Handle password reset request
     """
-    session_id = request.get("session_id")
-    user_id = validate_session(session_id)
+    username= validate_input(request.get("username"))
 
-    if not user_id:
+    if not username:
         return {"status": "error", "message": "Invalid or expired session"}
 
     old_password_hash = request.get("old_password_hash")
@@ -443,8 +441,8 @@ def handle_reset_password(request, ip_address=None):
         cursor.execute("""
             SELECT password_hash, salt 
             FROM users 
-            WHERE user_id = ?
-        """, (user_id,))
+            WHERE username = ?
+        """, (username,))
 
         user = cursor.fetchone()
         if not user:
@@ -463,13 +461,13 @@ def handle_reset_password(request, ip_address=None):
         cursor.execute("""
             UPDATE users 
             SET password_hash = ?, salt = ? 
-            WHERE user_id = ?
-        """, (final_new_hash, new_salt, user_id))
+            WHERE username = ?
+        """, (final_new_hash, new_salt, username))
 
         conn.commit()
 
         # Log the password reset
-        log_action(user_id, "password_reset", "Password was reset", ip_address)
+        log_action(username, "password_reset", "Password was reset", ip_address)
 
         return {"status": "success", "message": "Password reset successful"}
     except Exception as e:
@@ -481,82 +479,104 @@ def handle_reset_password(request, ip_address=None):
 
 def handle_upload_file(request, ip_address=None):
     """
-    Handle file upload request
-    The file is already encrypted on the client side
+    Handle file upload request with simplified interface
     """
-    session_id = request.get("session_id")
-    user_id = validate_session(session_id)
-
-    if not user_id:
-        return {"status": "error", "message": "Invalid or expired session"}
-
-    filename = validate_input(request.get("filename"), r'^[a-zA-Z0-9_\-. ]{1,255}$')
-    original_filename = validate_input(request.get("original_filename"), r'^[a-zA-Z0-9_\-. ]{1,255}$')
-    file_size = request.get("file_size")
-    encrypted_key = request.get("encrypted_key")  # Encrypted with user's key
-    iv = request.get("iv")  # Initialization vector
-    encrypted_data_base64 = request.get("encrypted_data")  # Base64 encoded encrypted data
-
-    if not filename or not original_filename or not file_size or not encrypted_key or not iv or not encrypted_data_base64:
-        return {"status": "error", "message": "Missing required file information"}
-
+    username = validate_input(request.get("username"))
+    
+    if not username:
+        return {"status": "error", "message": "Invalid username"}
+        
+    # Get user_id from username
     try:
-        encrypted_data = base64.b64decode(encrypted_data_base64)
-
         conn = get_db_connection()
         cursor = conn.cursor()
-
-        # Generate a unique filename to prevent overwriting
-        safe_filename = f"{int(time.time())}_{filename}"
-        file_path = os.path.join("files", safe_filename)
-
-        # Ensure the files directory exists
-        os.makedirs("files", exist_ok=True)
-
-        # Save the encrypted file
-        with open(file_path, 'wb') as f:
-            f.write(encrypted_data)
-
-        # Create file record
-        cursor.execute("""
-            INSERT INTO files 
-            (filename, original_filename, owner_id, upload_date, last_modified, file_size, file_path, is_deleted) 
-            VALUES (?, ?, ?, ?, ?, ?, ?, ?)
-        """, (
-            safe_filename,
-            original_filename,
-            user_id,
-            datetime.datetime.now(),
-            datetime.datetime.now(),
-            file_size,
-            file_path,
-            0
-        ))
-
-        file_id = cursor.lastrowid
-
-        # Store encryption key (encrypted with user's key)
-        cursor.execute("""
-            INSERT INTO file_keys 
-            (file_id, key_encrypted, iv) 
-            VALUES (?, ?, ?)
-        """, (file_id, encrypted_key, iv))
-
-        conn.commit()
-
-        # Log the upload
-        log_action(user_id, "file_upload", f"Uploaded file: {original_filename}", ip_address)
-
-        return {
-            "status": "success",
-            "message": "File uploaded successfully",
-            "file_id": file_id
-        }
+        
+        cursor.execute("SELECT user_id FROM users WHERE username = ?", (username,))
+        user = cursor.fetchone()
+        if not user:
+            return {"status": "error", "message": "User not found"}
+        
+        user_id = user['user_id']
+        
+        # Get filename and data from request
+        filename = validate_input(request.get("filename"), r'^[a-zA-Z0-9_\-. ]{1,255}$')
+        encrypted_data_str = request.get("data")  # This contains all the encrypted package
+        
+        if not filename or not encrypted_data_str:
+            return {"status": "error", "message": "Missing filename or file data"}
+            
+        # Decode the encrypted package
+        try:
+            encrypted_package_json = base64.b64decode(encrypted_data_str).decode()
+            encrypted_package = json.loads(encrypted_package_json)
+            
+            # Extract data from the package
+            ciphertext = base64.b64decode(encrypted_package["ciphertext"])
+            nonce = encrypted_package["nonce"]  # Keep as base64 for storage
+            tag = encrypted_package["tag"]      # Keep as base64 for storage
+            metadata = encrypted_package.get("metadata", {})
+            
+            original_filename = metadata.get("original_filename", filename)
+            file_size = len(ciphertext)
+            
+            # Generate a unique filename to prevent overwriting
+            safe_filename = f"{int(time.time())}_{filename}"
+            file_path = os.path.join("files", safe_filename)
+            
+            # Ensure the files directory exists
+            os.makedirs("files", exist_ok=True)
+            
+            # Save the encrypted file
+            with open(file_path, 'wb') as f:
+                f.write(ciphertext)
+                
+            # Create file record
+            cursor.execute("""
+                INSERT INTO files 
+                (filename, original_filename, owner_id, upload_date, last_modified, file_size, file_path, is_deleted) 
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+            """, (
+                safe_filename,
+                original_filename,
+                user_id,
+                datetime.datetime.now(),
+                datetime.datetime.now(),
+                file_size,
+                file_path,
+                0
+            ))
+            
+            file_id = cursor.lastrowid
+            
+            # Store encryption information
+            cursor.execute("""
+                INSERT INTO file_keys 
+                (file_id, key_encrypted, iv) 
+                VALUES (?, ?, ?)
+            """, (file_id, tag, nonce))  # Using tag as key_encrypted and nonce as iv
+            
+            conn.commit()
+            
+            # Log the upload
+            log_action(user_id, "file_upload", f"Uploaded file: {original_filename}", ip_address)
+            
+            return {
+                "status": "success",
+                "message": "File uploaded successfully",
+                "file_id": file_id
+            }
+            
+        except json.JSONDecodeError:
+            return {"status": "error", "message": "Invalid encrypted package format"}
+        except KeyError as e:
+            return {"status": "error", "message": f"Missing required encryption data: {str(e)}"}
+            
     except Exception as e:
         logger.error(f"File upload error: {e}")
         return {"status": "error", "message": "File upload failed"}
     finally:
         close_connection(conn)
+    
 
 
 def handle_download_file(request, ip_address=None):
@@ -565,8 +585,9 @@ def handle_download_file(request, ip_address=None):
     """
     session_id = request.get("session_id")
     user_id = validate_session(session_id)
+    username = validate_input(request.get("username"))
 
-    if not user_id:
+    if not username:
         return {"status": "error", "message": "Invalid or expired session"}
 
     file_id = request.get("file_id")

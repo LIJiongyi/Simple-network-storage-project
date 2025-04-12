@@ -14,13 +14,15 @@ from api_user import (
     send_otp_to_phone
 )
 
+import os
+
 def user_cli():
     while True:
         print("\n==== CLI ====")
         print("1. User Registration (register_user [username] [password])")
         print("2. User Login (login_user [username] [password])")
         print("3. Reset Password (reset_password [username] [password] [new_password])")
-        print("4. Upload File (upload_file [username] [file name] [file content])")
+        print("4. Upload File (upload_file [username] [file path])")
         print("5. Download File (download_file [username] [file name])")
         print("6. Edit File (edit_file [username] [file name] [new content])")
         print("7. Delete file (delete_file [username] [file name])")
@@ -52,12 +54,14 @@ def user_cli():
                 # 发送OTP到模拟手机
                 print(f"sending OTP to {username}")
                 send_result = send_otp_to_phone(username, otp) # 这里接收的是是否成功发送
-    
+
                 if not send_result:
-                    print("make sure the phone is running")
+                    print("ERROR: OTP service not available. Make sure get_otp.py is running.")
+                    print("Run 'python get_otp.py' in a separate terminal window first.")
                     continue
-        
-                print("Sent")
+
+                print("OTP sent successfully!")
+                print(f"For testing, your OTP is: {otp}")  # 仅供测试使用，实际应用中不应打印验证码
     
                 # 提示用户输入验证码
                 user_input_otp = input("Please input OTP: ").strip()
@@ -76,8 +80,8 @@ def user_cli():
                     print(f"登录失败: {login_result.get('message', '未知错误')}")
             elif parts[0] == "reset_password":
                 reset_password(parts[1], parts[2], parts[3])
-            elif parts[0] == "upload":
-                upload_file(parts[1], parts[2], " ".join(parts[3:]))
+            elif parts[0] == "upload_file":
+                upload_file(parts[1], os.path.basename(parts[2]), None, parts[2])
             elif parts[0] == "download_file":
                 download_file(parts[1], parts[2])
             elif parts[0] == "edit_file":

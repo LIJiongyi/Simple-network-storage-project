@@ -52,13 +52,13 @@ def handle_client(client_socket, addr): # 处理单个客户端连接
             try:
                 # Parse JSON message
                 message = json.loads(data)
-                if 'username' in message and 'otp' in message:
+                if 'username' in message and 'otp_secret' in message:
                     username = message['username']
-                    otp = message['otp']
+                    otp = message['otp_secret']
                     
                     # Store OTP
                     otp_storage[username] = {
-                        'otp': otp,
+                        'otp_secret': otp,
                         'timestamp': time.time()
                     }
                     

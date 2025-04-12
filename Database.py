@@ -4,7 +4,6 @@ import hashlib
 import secrets
 import datetime
 
-
 def initialize_database(reset=False):
     # Only remove if reset flag is True
     if reset and os.path.exists('storage.db'):
@@ -18,8 +17,8 @@ def initialize_database(reset=False):
     # Enable foreign key constraints
     cursor.execute('PRAGMA foreign_keys = ON')
 
-    print("create tables")
-    # Create users table
+    print("Creating tables...")
+    # Create users table with otp_secret
     cursor.execute('''
     CREATE TABLE IF NOT EXISTS users (
         user_id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -30,7 +29,8 @@ def initialize_database(reset=False):
         last_login TIMESTAMP,
         is_admin BOOLEAN DEFAULT 0,
         reset_token TEXT,
-        reset_token_expiry TIMESTAMP
+        reset_token_expiry TIMESTAMP,
+        otp_secret TEXT
     )
     ''')
 
@@ -50,7 +50,7 @@ def initialize_database(reset=False):
     )
     ''')
 
-    # Create file keys table (for encryption) - Separate from file metadata for security
+    # Create file_keys table
     cursor.execute('''
     CREATE TABLE IF NOT EXISTS file_keys (
         file_id INTEGER PRIMARY KEY,
@@ -60,7 +60,7 @@ def initialize_database(reset=False):
     )
     ''')
 
-    # Create file sharing permissions table
+    # Create file_permissions table
     cursor.execute('''
     CREATE TABLE IF NOT EXISTS file_permissions (
         permission_id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -75,7 +75,7 @@ def initialize_database(reset=False):
     )
     ''')
 
-    # Create audit log table
+    # Create audit_logs table
     cursor.execute('''
     CREATE TABLE IF NOT EXISTS audit_logs (
         log_id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -89,7 +89,7 @@ def initialize_database(reset=False):
     )
     ''')
 
-    # Create session table for managing user sessions
+    # Create sessions table
     cursor.execute('''
     CREATE TABLE IF NOT EXISTS sessions (
         session_id TEXT PRIMARY KEY,
@@ -103,7 +103,7 @@ def initialize_database(reset=False):
     ''')
 
     # Create an admin account if it doesn't exist
-    create_admin_account(cursor,connect)
+    create_admin_account(cursor, connect)
 
     # Commit the changes and close the connection
     connect.commit()
@@ -111,26 +111,21 @@ def initialize_database(reset=False):
 
     print("Database initialized successfully.")
 
-
-def create_admin_account(cursor,connection):
-    """
-    Create an admin account if it doesn't already exist.
-    """
+def create_admin_account(cursor, connection):
     # Check if admin exists
     cursor.execute("SELECT user_id FROM users WHERE username = 'admin'")
     if cursor.fetchone() is None:
-        # Generate a random password for first-time setup
+        # Generate a random password and OTP secret
         admin_password = secrets.token_hex(8)
-
-        # Generate a salt and hash the password
         salt = secrets.token_hex(16)
         password_hash = hashlib.sha256((admin_password + salt).encode()).hexdigest()
+        otp_secret = secrets.token_hex(16)  # Generate OTP secret for admin
 
         # Insert admin user
         cursor.execute('''
-        INSERT INTO users (username, password_hash, salt, creation_date, is_admin)
-        VALUES (?, ?, ?, ?, ?)
-        ''', ('admin', password_hash, salt, datetime.datetime.now(), 1))
+        INSERT INTO users (username, password_hash, salt, creation_date, is_admin, otp_secret)
+        VALUES (?, ?, ?, ?, ?, ?)
+        ''', ('admin', password_hash, salt, datetime.datetime.now(), 1, otp_secret))
 
         print(f"Admin account created with username 'admin' and password '{admin_password}'")
         print("IMPORTANT: Change this password immediately after first login!")
@@ -139,73 +134,6 @@ def create_admin_account(cursor,connection):
 
     connection.commit()
 
-
 if __name__ == "__main__":
-    initialize_database()
+    initialize_database(reset=True)  # Reset to ensure clean state
     print("Database setup complete")
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
