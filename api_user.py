@@ -39,7 +39,7 @@ def send_request(request):
 def register_user(username, password):
     """注册用户"""
     password_hash = hashlib.sha256(password.encode()).hexdigest()
-    request = {"action": "register", "username": username, "password": password_hash}
+    request = {"action": "register", "username": username, "password_hash": password_hash} # 将password改为password_hash
     response = send_request(request)
     print(f"注册 {username}: {response}")
     return response

@@ -13,7 +13,6 @@ import re
 import logging
 from concurrent.futures import ThreadPoolExecutor
 import pyotp  
-
 # Set up logging
 logging.basicConfig(
     level=logging.INFO,
@@ -1054,7 +1053,7 @@ def main():
     if not os.path.exists(DB_PATH):
         logger.info("Database not found, initializing...")
         try:
-            from database import initialize_database
+            from Database import initialize_database
             initialize_database()
         except ImportError:
             logger.error("Could not import database module")

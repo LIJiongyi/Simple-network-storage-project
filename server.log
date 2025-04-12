@@ -1,0 +1,11 @@
+2025-04-11 14:57:07,104 - SecureStorage - INFO - Server started on localhost:9999
+2025-04-12 07:15:08,927 - SecureStorage - INFO - Server started on localhost:9999
+2025-04-12 07:15:51,770 - SecureStorage - INFO - New connection from ('127.0.0.1', 59755)
+2025-04-12 07:16:32,608 - SecureStorage - INFO - New connection from ('127.0.0.1', 59772)
+2025-04-12 07:16:32,608 - SecureStorage - WARNING - Input validation failed for pattern ^[a-zA-Z0-9_]{3,32}$: [johnny]
+2025-04-12 07:20:20,082 - SecureStorage - INFO - New connection from ('127.0.0.1', 60023)
+2025-04-12 07:20:20,082 - SecureStorage - WARNING - Input validation failed for pattern ^[a-zA-Z0-9_]{3,32}$: [username]
+2025-04-12 07:22:55,185 - SecureStorage - INFO - New connection from ('127.0.0.1', 60125)
+2025-04-12 08:04:22,787 - SecureStorage - INFO - Server started on localhost:9999
+2025-04-12 08:04:57,721 - SecureStorage - INFO - New connection from ('127.0.0.1', 52777)
+2025-04-12 08:04:57,747 - SecureStorage - INFO - Action logged: user_register by user 2
