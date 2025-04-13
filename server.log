@@ -1,14 +1,367 @@
-2025-04-11 14:57:07,104 - SecureStorage - INFO - Server started on localhost:9999
-2025-04-12 07:15:08,927 - SecureStorage - INFO - Server started on localhost:9999
-2025-04-12 07:15:51,770 - SecureStorage - INFO - New connection from ('127.0.0.1', 59755)
-2025-04-12 07:16:32,608 - SecureStorage - INFO - New connection from ('127.0.0.1', 59772)
-2025-04-12 07:16:32,608 - SecureStorage - WARNING - Input validation failed for pattern ^[a-zA-Z0-9_]{3,32}$: [johnny]
-2025-04-12 07:20:20,082 - SecureStorage - INFO - New connection from ('127.0.0.1', 60023)
-2025-04-12 07:20:20,082 - SecureStorage - WARNING - Input validation failed for pattern ^[a-zA-Z0-9_]{3,32}$: [username]
-2025-04-12 07:22:55,185 - SecureStorage - INFO - New connection from ('127.0.0.1', 60125)
-2025-04-12 08:04:22,787 - SecureStorage - INFO - Server started on localhost:9999
-2025-04-12 08:04:57,721 - SecureStorage - INFO - New connection from ('127.0.0.1', 52777)
-2025-04-12 08:04:57,747 - SecureStorage - INFO - Action logged: user_register by user 2
-2025-04-12 21:41:15,385 - SecureStorage - INFO - Server started on localhost:9999
-2025-04-12 21:47:28,148 - SecureStorage - INFO - Server started on localhost:9999
-2025-04-12 21:49:57,255 - SecureStorage - INFO - New connection from ('127.0.0.1', 55317)
+2025-04-10 02:19:53,221 - SecureStorage - INFO - Server started on localhost:9999
+2025-04-10 02:20:15,523 - SecureStorage - INFO - New connection from ('127.0.0.1', 50332)
+2025-04-10 02:20:15,524 - SecureStorage - WARNING - Input validation failed for pattern WAITFOR: sherlock
+2025-04-10 02:20:28,434 - SecureStorage - INFO - Server shutting down...
+2025-04-10 02:41:12,111 - SecureStorage - INFO - Server started on localhost:9999
+2025-04-10 02:41:41,061 - SecureStorage - INFO - New connection from ('127.0.0.1', 50393)
+2025-04-10 02:41:41,062 - SecureStorage - WARNING - Input validation failed for pattern WAITFOR: alice
+2025-04-10 02:43:35,038 - SecureStorage - INFO - Server shutting down...
+2025-04-10 02:44:42,167 - SecureStorage - INFO - Server started on localhost:9999
+2025-04-10 02:45:03,614 - SecureStorage - INFO - New connection from ('127.0.0.1', 50403)
+2025-04-10 02:45:03,616 - SecureStorage - WARNING - Input validation failed for pattern WAITFOR: Alice
+2025-04-10 02:45:21,594 - SecureStorage - INFO - New connection from ('127.0.0.1', 50404)
+2025-04-10 02:45:21,594 - SecureStorage - WARNING - Input validation failed for pattern WAITFOR: Alice123
+2025-04-10 02:46:01,829 - SecureStorage - INFO - Server shutting down...
+2025-04-10 02:46:13,213 - SecureStorage - INFO - Server started on localhost:9999
+2025-04-10 02:46:41,035 - SecureStorage - INFO - New connection from ('127.0.0.1', 50411)
+2025-04-10 02:46:57,757 - SecureStorage - INFO - New connection from ('127.0.0.1', 50413)
+2025-04-10 02:52:21,868 - SecureStorage - INFO - Server shutting down...
+2025-04-10 02:52:38,187 - SecureStorage - INFO - Server started on localhost:9999
+2025-04-10 02:52:41,778 - SecureStorage - INFO - New connection from ('127.0.0.1', 50440)
+2025-04-10 02:52:41,778 - SecureStorage - ERROR - Error handling client request: handle_register() takes 1 positional argument but 2 were given
+2025-04-10 02:52:41,778 - SecureStorage - INFO - New connection from ('127.0.0.1', 50441)
+2025-04-10 02:52:41,778 - SecureStorage - ERROR - Error handling client request: handle_register() takes 1 positional argument but 2 were given
+2025-04-10 02:52:41,780 - SecureStorage - INFO - New connection from ('127.0.0.1', 50442)
+2025-04-10 02:52:41,780 - SecureStorage - INFO - New connection from ('127.0.0.1', 50443)
+2025-04-10 02:52:41,781 - SecureStorage - INFO - New connection from ('127.0.0.1', 50444)
+2025-04-10 02:52:41,781 - SecureStorage - INFO - New connection from ('127.0.0.1', 50445)
+2025-04-10 02:52:41,781 - SecureStorage - INFO - New connection from ('127.0.0.1', 50446)
+2025-04-10 02:52:41,781 - SecureStorage - INFO - New connection from ('127.0.0.1', 50447)
+2025-04-10 02:52:41,782 - SecureStorage - INFO - New connection from ('127.0.0.1', 50448)
+2025-04-10 02:53:34,961 - SecureStorage - INFO - Server shutting down...
+2025-04-10 02:56:50,437 - SecureStorage - INFO - Server started on localhost:9999
+2025-04-10 02:57:14,376 - SecureStorage - INFO - New connection from ('127.0.0.1', 50459)
+2025-04-10 02:57:14,377 - SecureStorage - WARNING - Input validation failed for pattern WAITFOR: 123312
+2025-04-10 02:57:40,522 - SecureStorage - INFO - New connection from ('127.0.0.1', 50460)
+2025-04-10 02:57:40,523 - SecureStorage - WARNING - Input validation failed for pattern WAITFOR: sherlock
+2025-04-10 03:00:11,040 - SecureStorage - INFO - New connection from ('127.0.0.1', 50585)
+2025-04-10 03:00:11,042 - SecureStorage - WARNING - Input validation failed for pattern WAITFOR: alice123
+2025-04-10 03:06:39,351 - SecureStorage - INFO - Server shutting down...
+2025-04-10 03:06:41,991 - SecureStorage - INFO - Server started on localhost:9999
+2025-04-10 03:07:08,238 - SecureStorage - INFO - New connection from ('127.0.0.1', 50599)
+2025-04-10 03:07:08,238 - SecureStorage - WARNING - Potential SQL injection detected: alice123
+2025-04-10 03:09:18,414 - SecureStorage - INFO - New connection from ('127.0.0.1', 50608)
+2025-04-10 03:09:18,414 - SecureStorage - WARNING - Potential SQL injection detected: sherlock123
+2025-04-10 03:14:35,364 - SecureStorage - INFO - Server shutting down...
+2025-04-10 03:14:47,945 - SecureStorage - INFO - Server started on localhost:9999
+2025-04-10 03:15:36,081 - SecureStorage - INFO - Server shutting down...
+2025-04-10 03:15:41,038 - SecureStorage - INFO - Server started on localhost:9999
+2025-04-10 03:16:45,745 - SecureStorage - INFO - New connection from ('127.0.0.1', 50668)
+2025-04-10 03:18:22,034 - SecureStorage - INFO - Server shutting down...
+2025-04-10 03:18:26,183 - SecureStorage - INFO - Server started on localhost:9999
+2025-04-10 03:18:41,766 - SecureStorage - INFO - New connection from ('127.0.0.1', 50674)
+2025-04-10 03:18:41,767 - SecureStorage - ERROR - Error handling client request: handle_register() takes 1 positional argument but 2 were given
+2025-04-10 03:21:58,399 - SecureStorage - INFO - Server shutting down...
+2025-04-10 03:33:51,252 - SecureStorage - INFO - Server started on localhost:9999
+2025-04-10 03:34:01,565 - SecureStorage - INFO - New connection from ('127.0.0.1', 50707)
+2025-04-10 03:34:01,566 - SecureStorage - WARNING - Input validation failed for pattern WAITFOR: alice
+2025-04-10 03:53:46,545 - SecureStorage - INFO - Server shutting down...
+2025-04-10 03:53:48,827 - SecureStorage - INFO - Server started on localhost:9999
+2025-04-10 03:54:09,672 - SecureStorage - INFO - New connection from ('127.0.0.1', 50742)
+2025-04-10 03:54:44,862 - SecureStorage - INFO - Server shutting down...
+2025-04-10 03:54:55,775 - SecureStorage - INFO - Server started on localhost:9999
+2025-04-10 03:55:09,714 - SecureStorage - INFO - Server shutting down...
+2025-04-10 03:55:13,308 - SecureStorage - INFO - Server started on localhost:9999
+2025-04-10 03:55:41,616 - SecureStorage - INFO - New connection from ('127.0.0.1', 50751)
+2025-04-10 04:02:18,327 - SecureStorage - INFO - New connection from ('127.0.0.1', 50766)
+2025-04-10 04:02:18,329 - SecureStorage - INFO - Action logged: user_register by user 2
+2025-04-10 04:02:18,329 - SecureStorage - INFO - New connection from ('127.0.0.1', 50767)
+2025-04-10 04:02:18,330 - SecureStorage - INFO - Action logged: user_register by user 3
+2025-04-10 04:02:18,333 - SecureStorage - INFO - New connection from ('127.0.0.1', 50768)
+2025-04-10 04:02:18,333 - SecureStorage - INFO - New connection from ('127.0.0.1', 50769)
+2025-04-10 04:02:18,333 - SecureStorage - INFO - New connection from ('127.0.0.1', 50770)
+2025-04-10 04:02:18,334 - SecureStorage - INFO - New connection from ('127.0.0.1', 50771)
+2025-04-10 04:02:18,334 - SecureStorage - INFO - New connection from ('127.0.0.1', 50772)
+2025-04-10 04:02:18,334 - SecureStorage - INFO - New connection from ('127.0.0.1', 50773)
+2025-04-10 04:02:18,335 - SecureStorage - INFO - New connection from ('127.0.0.1', 50774)
+2025-04-10 04:03:48,539 - SecureStorage - INFO - Server shutting down...
+2025-04-10 04:03:54,723 - SecureStorage - INFO - Server started on localhost:9999
+2025-04-10 04:06:04,659 - SecureStorage - INFO - New connection from ('127.0.0.1', 50781)
+2025-04-10 04:06:04,660 - SecureStorage - INFO - New connection from ('127.0.0.1', 50782)
+2025-04-10 04:06:04,662 - SecureStorage - INFO - New connection from ('127.0.0.1', 50783)
+2025-04-10 04:06:04,662 - SecureStorage - INFO - New connection from ('127.0.0.1', 50784)
+2025-04-10 04:06:04,663 - SecureStorage - INFO - New connection from ('127.0.0.1', 50785)
+2025-04-10 04:06:04,663 - SecureStorage - INFO - New connection from ('127.0.0.1', 50786)
+2025-04-10 04:06:04,663 - SecureStorage - INFO - New connection from ('127.0.0.1', 50787)
+2025-04-10 04:06:04,664 - SecureStorage - INFO - New connection from ('127.0.0.1', 50788)
+2025-04-10 04:06:04,664 - SecureStorage - INFO - New connection from ('127.0.0.1', 50789)
+2025-04-10 04:11:01,060 - SecureStorage - INFO - New connection from ('127.0.0.1', 50800)
+2025-04-10 04:11:01,061 - SecureStorage - WARNING - Input validation failed for pattern ^[a-zA-Z0-9_]{3,32}$: [sherlock123]
+2025-04-10 04:11:44,183 - SecureStorage - INFO - New connection from ('127.0.0.1', 50802)
+2025-04-10 04:11:44,183 - SecureStorage - WARNING - Input validation failed for pattern ^[a-zA-Z0-9_]{3,32}$: [username]
+2025-04-10 04:13:30,491 - SecureStorage - INFO - New connection from ('127.0.0.1', 50865)
+2025-04-10 04:13:30,500 - SecureStorage - INFO - Action logged: user_register by user 4
+2025-04-10 04:14:44,051 - SecureStorage - INFO - New connection from ('127.0.0.1', 50872)
+2025-04-10 04:14:44,055 - SecureStorage - INFO - Action logged: user_register by user 5
+2025-04-10 04:22:13,919 - SecureStorage - INFO - Server shutting down...
+2025-04-12 16:15:16,210 - SecureStorage - INFO - Server started on localhost:9999
+2025-04-12 16:15:36,895 - SecureStorage - INFO - New connection from ('127.0.0.1', 49434)
+2025-04-12 16:15:36,898 - SecureStorage - INFO - Action logged: user_register by user 6
+2025-04-12 16:29:07,705 - SecureStorage - INFO - Server shutting down...
+2025-04-12 16:29:17,207 - SecureStorage - INFO - Server started on localhost:9999
+2025-04-12 16:51:38,129 - SecureStorage - INFO - Server shutting down...
+2025-04-12 16:53:48,883 - SecureStorage - INFO - Server started on localhost:9999
+2025-04-12 16:54:18,775 - SecureStorage - INFO - New connection from ('127.0.0.1', 50298)
+2025-04-12 16:54:18,785 - SecureStorage - INFO - Action logged: user_register by user 7
+2025-04-12 17:11:48,055 - SecureStorage - INFO - New connection from ('127.0.0.1', 50346)
+2025-04-12 17:11:48,061 - SecureStorage - INFO - Action logged: user_register by user 2
+2025-04-12 17:23:47,288 - SecureStorage - INFO - Server shutting down...
+2025-04-12 17:28:54,149 - SecureStorage - INFO - Server started on localhost:9999
+2025-04-12 17:29:06,612 - SecureStorage - INFO - New connection from ('127.0.0.1', 50413)
+2025-04-12 17:29:06,618 - SecureStorage - INFO - Action logged: user_register by user 2
+2025-04-12 17:29:47,359 - SecureStorage - INFO - New connection from ('127.0.0.1', 50416)
+2025-04-12 17:32:30,201 - SecureStorage - INFO - Server shutting down...
+2025-04-12 17:33:13,264 - SecureStorage - INFO - Server started on localhost:9999
+2025-04-12 17:33:31,235 - SecureStorage - INFO - New connection from ('127.0.0.1', 50427)
+2025-04-12 17:33:31,240 - SecureStorage - INFO - Action logged: user_register by user 2
+2025-04-12 17:34:13,890 - SecureStorage - INFO - New connection from ('127.0.0.1', 50429)
+2025-04-12 17:39:57,825 - SecureStorage - INFO - New connection from ('127.0.0.1', 50448)
+2025-04-12 18:06:56,351 - SecureStorage - INFO - Server shutting down...
+2025-04-12 18:07:47,125 - SecureStorage - INFO - Server started on localhost:9999
+2025-04-12 18:08:21,057 - SecureStorage - INFO - New connection from ('127.0.0.1', 50481)
+2025-04-12 18:08:21,062 - SecureStorage - INFO - Action logged: user_register by user 3
+2025-04-12 18:08:40,238 - SecureStorage - INFO - New connection from ('127.0.0.1', 50483)
+2025-04-12 18:14:09,945 - SecureStorage - INFO - New connection from ('127.0.0.1', 50493)
+2025-04-12 18:15:18,281 - SecureStorage - INFO - Server shutting down...
+2025-04-12 18:15:22,028 - SecureStorage - INFO - Server started on localhost:9999
+2025-04-12 18:16:02,019 - SecureStorage - INFO - Server shutting down...
+2025-04-12 18:25:08,304 - SecureStorage - INFO - Server started on localhost:9999
+2025-04-12 18:25:32,435 - SecureStorage - INFO - New connection from ('127.0.0.1', 50532)
+2025-04-12 18:25:32,444 - SecureStorage - INFO - Action logged: user_login by user 3
+2025-04-12 18:27:43,147 - SecureStorage - INFO - New connection from ('127.0.0.1', 50533)
+2025-04-12 18:34:10,509 - SecureStorage - INFO - Server shutting down...
+2025-04-12 18:34:13,760 - SecureStorage - INFO - Server started on localhost:9999
+2025-04-12 18:34:33,421 - SecureStorage - INFO - New connection from ('127.0.0.1', 50553)
+2025-04-12 18:34:33,426 - SecureStorage - INFO - Action logged: user_login by user 3
+2025-04-12 18:34:49,231 - SecureStorage - INFO - New connection from ('127.0.0.1', 50554)
+2025-04-12 18:36:26,861 - SecureStorage - INFO - Server shutting down...
+2025-04-12 18:36:29,244 - SecureStorage - INFO - Server started on localhost:9999
+2025-04-12 18:36:50,174 - SecureStorage - INFO - New connection from ('127.0.0.1', 50562)
+2025-04-12 18:36:50,181 - SecureStorage - INFO - Action logged: user_login by user 3
+2025-04-12 18:37:06,529 - SecureStorage - INFO - New connection from ('127.0.0.1', 50564)
+2025-04-12 18:37:46,473 - SecureStorage - INFO - Server shutting down...
+2025-04-12 18:37:59,575 - SecureStorage - INFO - Server started on localhost:9999
+2025-04-12 18:38:30,504 - SecureStorage - INFO - New connection from ('127.0.0.1', 50567)
+2025-04-12 18:38:30,509 - SecureStorage - INFO - Action logged: user_login by user 3
+2025-04-12 18:38:42,574 - SecureStorage - INFO - New connection from ('127.0.0.1', 50568)
+2025-04-12 20:40:09,302 - SecureStorage - INFO - Server started on localhost:9999
+2025-04-12 20:40:47,368 - SecureStorage - INFO - Server shutting down...
+2025-04-12 20:40:47,631 - SecureStorage - INFO - Server started on localhost:9999
+2025-04-12 20:41:48,040 - SecureStorage - INFO - Server shutting down...
+2025-04-12 20:42:47,735 - SecureStorage - INFO - Server started on localhost:9999
+2025-04-12 20:43:03,618 - SecureStorage - INFO - Server shutting down...
+2025-04-12 20:43:25,632 - SecureStorage - INFO - Server started on localhost:9999
+2025-04-12 20:44:27,721 - SecureStorage - INFO - New connection from ('127.0.0.1', 53227)
+2025-04-12 20:44:27,730 - SecureStorage - INFO - Action logged: user_register by user 4
+2025-04-12 20:47:01,363 - SecureStorage - INFO - New connection from ('127.0.0.1', 53300)
+2025-04-12 20:47:01,372 - SecureStorage - INFO - Action logged: user_login by user 4
+2025-04-12 21:07:39,226 - SecureStorage - INFO - Server started on localhost:9999
+2025-04-12 21:52:43,277 - SecureStorage - INFO - Server started on localhost:9999
+2025-04-12 21:53:20,200 - SecureStorage - INFO - New connection from ('127.0.0.1', 55448)
+2025-04-12 21:53:20,218 - SecureStorage - INFO - Action logged: user_login by user 4
+2025-04-12 21:57:06,904 - SecureStorage - INFO - New connection from ('127.0.0.1', 55573)
+2025-04-12 21:57:06,913 - SecureStorage - INFO - Action logged: user_login by user 4
+2025-04-12 22:07:33,172 - SecureStorage - INFO - Server started on localhost:9999
+2025-04-12 22:08:26,937 - SecureStorage - INFO - New connection from ('127.0.0.1', 55899)
+2025-04-12 22:08:26,946 - SecureStorage - INFO - Action logged: user_login by user 4
+2025-04-12 22:08:46,148 - SecureStorage - INFO - New connection from ('127.0.0.1', 55910)
+2025-04-12 22:11:09,845 - SecureStorage - INFO - Server started on localhost:9999
+2025-04-12 22:11:27,423 - SecureStorage - INFO - New connection from ('127.0.0.1', 55994)
+2025-04-12 22:11:27,431 - SecureStorage - INFO - Action logged: user_login by user 4
+2025-04-12 22:12:28,307 - SecureStorage - INFO - New connection from ('127.0.0.1', 56021)
+2025-04-12 22:14:14,032 - SecureStorage - INFO - New connection from ('127.0.0.1', 56074)
+2025-04-12 22:14:14,040 - SecureStorage - INFO - Action logged: user_login by user 4
+2025-04-12 22:15:42,726 - SecureStorage - INFO - Server started on localhost:9999
+2025-04-12 22:16:18,351 - SecureStorage - INFO - New connection from ('127.0.0.1', 56135)
+2025-04-12 22:16:18,362 - SecureStorage - INFO - Action logged: user_login by user 4
+2025-04-12 22:16:45,483 - SecureStorage - INFO - New connection from ('127.0.0.1', 56151)
+2025-04-12 22:29:16,450 - SecureStorage - INFO - Server started on localhost:9999
+2025-04-12 22:29:25,072 - SecureStorage - INFO - New connection from ('127.0.0.1', 56579)
+2025-04-12 22:29:25,080 - SecureStorage - INFO - Action logged: file_upload by user 4
+2025-04-12 22:35:47,452 - SecureStorage - INFO - New connection from ('127.0.0.1', 56769)
+2025-04-12 22:37:33,494 - SecureStorage - INFO - Server started on localhost:9999
+2025-04-12 22:37:40,695 - SecureStorage - INFO - New connection from ('127.0.0.1', 56823)
+2025-04-12 22:38:01,315 - SecureStorage - INFO - Server started on localhost:9999
+2025-04-12 22:38:16,686 - SecureStorage - INFO - New connection from ('127.0.0.1', 56841)
+2025-04-12 22:38:16,697 - SecureStorage - INFO - Action logged: user_login by user 4
+2025-04-12 22:38:50,931 - SecureStorage - INFO - New connection from ('127.0.0.1', 56855)
+2025-04-12 22:39:29,010 - SecureStorage - INFO - Server started on localhost:9999
+2025-04-12 22:41:31,264 - SecureStorage - INFO - New connection from ('127.0.0.1', 56932)
+2025-04-13 03:10:33,289 - SecureStorage - INFO - Server shutting down...
+2025-04-13 03:10:33,541 - SecureStorage - INFO - Server started on localhost:9999
+2025-04-13 03:11:17,510 - SecureStorage - INFO - New connection from ('127.0.0.1', 58608)
+2025-04-13 03:11:17,515 - SecureStorage - INFO - Action logged: user_login by user 4
+2025-04-13 03:12:02,148 - SecureStorage - INFO - New connection from ('127.0.0.1', 58642)
+2025-04-13 03:47:37,256 - SecureStorage - INFO - Server started on localhost:9999
+2025-04-13 03:47:54,913 - SecureStorage - INFO - New connection from ('127.0.0.1', 59859)
+2025-04-13 03:47:54,921 - SecureStorage - INFO - Action logged: user_login by user 4
+2025-04-13 03:48:08,886 - SecureStorage - INFO - New connection from ('127.0.0.1', 59870)
+2025-04-13 04:03:42,437 - SecureStorage - INFO - Server started on localhost:9999
+2025-04-13 04:03:52,574 - SecureStorage - INFO - New connection from ('127.0.0.1', 60306)
+2025-04-13 04:06:20,193 - SecureStorage - INFO - New connection from ('127.0.0.1', 60372)
+2025-04-13 04:06:20,194 - SecureStorage - ERROR - Error handling client request: name 'handle_upload_file' is not defined
+2025-04-13 04:06:32,930 - SecureStorage - INFO - Server started on localhost:9999
+2025-04-13 04:06:42,500 - SecureStorage - INFO - New connection from ('127.0.0.1', 60388)
+2025-04-13 04:06:42,506 - SecureStorage - INFO - Action logged: file_upload by user 4
+2025-04-13 04:06:49,261 - SecureStorage - INFO - New connection from ('127.0.0.1', 60390)
+2025-04-13 04:06:49,266 - SecureStorage - INFO - Action logged: file_upload by user 4
+2025-04-13 04:07:09,008 - SecureStorage - INFO - New connection from ('127.0.0.1', 60401)
+2025-04-13 10:57:01,305 - SecureStorage - INFO - New connection from ('127.0.0.1', 64192)
+2025-04-13 10:57:52,770 - SecureStorage - INFO - New connection from ('127.0.0.1', 64223)
+2025-04-13 10:57:52,800 - SecureStorage - INFO - Action logged: file_upload by user 4
+2025-04-13 11:09:57,397 - SecureStorage - INFO - Server started on localhost:9999
+2025-04-13 11:10:15,818 - SecureStorage - INFO - New connection from ('127.0.0.1', 64709)
+2025-04-13 11:10:15,823 - SecureStorage - INFO - Action logged: user_login by user 4
+2025-04-13 11:10:30,212 - SecureStorage - INFO - New connection from ('127.0.0.1', 64710)
+2025-04-13 11:10:30,214 - SecureStorage - ERROR - File download error: Incorrect number of bindings supplied. The current statement uses 3, and there are 4 supplied.
+2025-04-13 11:11:08,396 - SecureStorage - INFO - New connection from ('127.0.0.1', 64724)
+2025-04-13 11:11:08,398 - SecureStorage - ERROR - File download error: Incorrect number of bindings supplied. The current statement uses 3, and there are 4 supplied.
+2025-04-13 11:12:19,928 - SecureStorage - INFO - New connection from ('127.0.0.1', 64764)
+2025-04-13 11:12:19,931 - SecureStorage - ERROR - File download error: Incorrect number of bindings supplied. The current statement uses 3, and there are 4 supplied.
+2025-04-13 11:29:01,371 - SecureStorage - INFO - Server started on localhost:9999
+2025-04-13 11:29:42,919 - SecureStorage - INFO - New connection from ('127.0.0.1', 56225)
+2025-04-13 11:29:42,935 - SecureStorage - INFO - Action logged: user_register by user 5
+2025-04-13 11:29:55,084 - SecureStorage - INFO - New connection from ('127.0.0.1', 56231)
+2025-04-13 11:30:08,047 - SecureStorage - INFO - New connection from ('127.0.0.1', 56234)
+2025-04-13 11:30:08,063 - SecureStorage - INFO - Action logged: user_login by user 5
+2025-04-13 11:30:19,129 - SecureStorage - INFO - New connection from ('127.0.0.1', 56239)
+2025-04-13 11:30:19,135 - SecureStorage - INFO - Action logged: list_files by user 5
+2025-04-13 11:31:08,150 - SecureStorage - INFO - New connection from ('127.0.0.1', 56266)
+2025-04-13 11:31:08,156 - SecureStorage - INFO - Action logged: file_upload by user 5
+2025-04-13 11:31:15,408 - SecureStorage - INFO - New connection from ('127.0.0.1', 56271)
+2025-04-13 11:31:15,411 - SecureStorage - ERROR - List files error: 'str' object has no attribute 'isoformat'
+2025-04-13 11:31:28,780 - SecureStorage - INFO - New connection from ('127.0.0.1', 56279)
+2025-04-13 11:31:28,782 - SecureStorage - ERROR - File download error: Incorrect number of bindings supplied. The current statement uses 3, and there are 4 supplied.
+2025-04-13 11:31:54,899 - SecureStorage - INFO - New connection from ('127.0.0.1', 56296)
+2025-04-13 11:31:54,901 - SecureStorage - ERROR - List files error: 'str' object has no attribute 'isoformat'
+2025-04-13 11:32:10,535 - SecureStorage - INFO - New connection from ('127.0.0.1', 56313)
+2025-04-13 11:32:21,653 - SecureStorage - INFO - New connection from ('127.0.0.1', 56324)
+2025-04-13 11:35:03,471 - SecureStorage - INFO - New connection from ('127.0.0.1', 56449)
+2025-04-13 11:35:03,472 - SecureStorage - WARNING - Input validation failed for pattern ^[a-zA-Z0-9_]{3,32}$: A
+2025-04-13 11:35:12,173 - SecureStorage - INFO - New connection from ('127.0.0.1', 56451)
+2025-04-13 11:35:12,174 - SecureStorage - WARNING - Input validation failed for pattern ^[a-zA-Z0-9_]{3,32}$: A
+2025-04-13 11:35:27,213 - SecureStorage - INFO - New connection from ('127.0.0.1', 56453)
+2025-04-13 11:35:27,214 - SecureStorage - WARNING - Input validation failed for pattern ^[a-zA-Z0-9_]{3,32}$: A
+2025-04-13 11:35:48,139 - SecureStorage - INFO - New connection from ('127.0.0.1', 56458)
+2025-04-13 11:35:48,140 - SecureStorage - WARNING - Input validation failed for pattern ^[a-zA-Z0-9_]{3,32}$: ab
+2025-04-13 11:36:05,159 - SecureStorage - INFO - New connection from ('127.0.0.1', 56467)
+2025-04-13 11:36:05,169 - SecureStorage - INFO - Action logged: user_register by user 6
+2025-04-13 11:36:18,224 - SecureStorage - INFO - New connection from ('127.0.0.1', 56475)
+2025-04-13 11:36:18,231 - SecureStorage - INFO - Action logged: user_login by user 6
+2025-04-13 11:36:27,647 - SecureStorage - INFO - New connection from ('127.0.0.1', 56479)
+2025-04-13 11:36:27,653 - SecureStorage - ERROR - Error logging action: FOREIGN KEY constraint failed
+2025-04-13 11:36:48,214 - SecureStorage - INFO - New connection from ('127.0.0.1', 56484)
+2025-04-13 11:36:48,222 - SecureStorage - INFO - Action logged: list_files by user 6
+2025-04-13 11:37:01,886 - SecureStorage - INFO - New connection from ('127.0.0.1', 56486)
+2025-04-13 11:37:01,892 - SecureStorage - INFO - Action logged: user_login by user 5
+2025-04-13 11:37:27,790 - SecureStorage - INFO - New connection from ('127.0.0.1', 56501)
+2025-04-13 11:37:27,792 - SecureStorage - ERROR - List files error: 'str' object has no attribute 'isoformat'
+2025-04-13 11:47:09,181 - SecureStorage - INFO - Server shutting down...
+2025-04-13 11:47:19,043 - SecureStorage - INFO - Server started on localhost:9999
+2025-04-13 11:47:28,708 - SecureStorage - INFO - New connection from ('127.0.0.1', 57012)
+2025-04-13 11:47:28,714 - SecureStorage - ERROR - List files error: unconverted data remains: .153038
+2025-04-13 11:47:49,760 - SecureStorage - INFO - New connection from ('127.0.0.1', 57031)
+2025-04-13 11:47:49,763 - SecureStorage - ERROR - Error creating session: type object 'datetime.datetime' has no attribute 'datetime'
+2025-04-13 11:47:49,763 - SecureStorage - ERROR - Login error: type object 'datetime.datetime' has no attribute 'datetime'
+2025-04-13 11:48:06,859 - SecureStorage - INFO - New connection from ('127.0.0.1', 57044)
+2025-04-13 11:49:31,888 - SecureStorage - INFO - Server shutting down...
+2025-04-13 11:49:46,147 - SecureStorage - INFO - Server started on localhost:9999
+2025-04-13 11:49:56,018 - SecureStorage - INFO - New connection from ('127.0.0.1', 57085)
+2025-04-13 11:50:08,396 - SecureStorage - INFO - Server shutting down...
+2025-04-13 11:50:15,601 - SecureStorage - INFO - Server started on localhost:9999
+2025-04-13 11:50:28,294 - SecureStorage - INFO - New connection from ('127.0.0.1', 57100)
+2025-04-13 11:52:12,799 - SecureStorage - INFO - New connection from ('127.0.0.1', 57175)
+2025-04-13 11:52:35,874 - SecureStorage - INFO - New connection from ('127.0.0.1', 57191)
+2025-04-13 11:52:35,887 - SecureStorage - INFO - Action logged: user_login by user 5
+2025-04-13 11:52:45,266 - SecureStorage - INFO - New connection from ('127.0.0.1', 57197)
+2025-04-13 11:52:45,271 - SecureStorage - ERROR - List files error: module 'datetime' has no attribute 'strptime'
+2025-04-13 11:53:25,745 - SecureStorage - INFO - Server shutting down...
+2025-04-13 11:53:29,790 - SecureStorage - INFO - Server started on localhost:9999
+2025-04-13 11:53:33,539 - SecureStorage - INFO - New connection from ('127.0.0.1', 57245)
+2025-04-13 11:53:33,554 - SecureStorage - ERROR - List files error: unconverted data remains: .153038
+2025-04-13 11:54:01,382 - SecureStorage - INFO - New connection from ('127.0.0.1', 57256)
+2025-04-13 11:54:01,384 - SecureStorage - ERROR - Error creating session: type object 'datetime.datetime' has no attribute 'datetime'
+2025-04-13 11:54:01,384 - SecureStorage - ERROR - Login error: type object 'datetime.datetime' has no attribute 'datetime'
+2025-04-13 11:54:11,659 - SecureStorage - INFO - New connection from ('127.0.0.1', 57263)
+2025-04-13 11:56:23,215 - SecureStorage - INFO - Server shutting down...
+2025-04-13 11:56:25,985 - SecureStorage - INFO - Server started on localhost:9999
+2025-04-13 11:56:40,830 - SecureStorage - INFO - New connection from ('127.0.0.1', 57362)
+2025-04-13 11:56:40,834 - SecureStorage - ERROR - Error creating session: type object 'datetime.datetime' has no attribute 'datetime'
+2025-04-13 11:56:40,834 - SecureStorage - ERROR - Login error: type object 'datetime.datetime' has no attribute 'datetime'
+2025-04-13 11:59:45,483 - SecureStorage - INFO - Server shutting down...
+2025-04-13 11:59:49,474 - SecureStorage - INFO - Server started on localhost:9999
+2025-04-13 11:59:59,958 - SecureStorage - INFO - New connection from ('127.0.0.1', 57503)
+2025-04-13 11:59:59,967 - SecureStorage - INFO - Action logged: user_login by user 5
+2025-04-13 12:00:01,473 - SecureStorage - INFO - New connection from ('127.0.0.1', 57504)
+2025-04-13 12:00:01,476 - SecureStorage - ERROR - List files error: module 'datetime' has no attribute 'strptime'
+2025-04-13 12:01:11,973 - SecureStorage - INFO - Server shutting down...
+2025-04-13 12:01:14,390 - SecureStorage - INFO - Server started on localhost:9999
+2025-04-13 12:01:32,316 - SecureStorage - INFO - New connection from ('127.0.0.1', 57564)
+2025-04-13 12:01:32,327 - SecureStorage - INFO - Action logged: user_login by user 5
+2025-04-13 12:01:33,523 - SecureStorage - INFO - New connection from ('127.0.0.1', 57565)
+2025-04-13 12:01:33,527 - SecureStorage - ERROR - List files error: unconverted data remains: .153038
+2025-04-13 12:10:34,852 - SecureStorage - INFO - Server shutting down...
+2025-04-13 12:10:39,135 - SecureStorage - INFO - Server started on localhost:9999
+2025-04-13 12:10:42,588 - SecureStorage - INFO - New connection from ('127.0.0.1', 57891)
+2025-04-13 12:10:42,601 - SecureStorage - INFO - Action logged: list_files by user 5
+2025-04-13 12:15:30,440 - SecureStorage - INFO - New connection from ('127.0.0.1', 58085)
+2025-04-13 12:15:30,448 - SecureStorage - INFO - Action logged: list_files by user 5
+2025-04-13 12:15:45,943 - SecureStorage - INFO - New connection from ('127.0.0.1', 58095)
+2025-04-13 12:15:45,955 - SecureStorage - INFO - Action logged: user_login by user 5
+2025-04-13 12:15:47,355 - SecureStorage - INFO - New connection from ('127.0.0.1', 58096)
+2025-04-13 12:15:47,368 - SecureStorage - INFO - Action logged: list_files by user 5
+2025-04-13 12:15:59,979 - SecureStorage - INFO - New connection from ('127.0.0.1', 58104)
+2025-04-13 12:15:59,986 - SecureStorage - INFO - Action logged: list_files by user 5
+2025-04-13 12:16:17,381 - SecureStorage - INFO - New connection from ('127.0.0.1', 58107)
+2025-04-13 13:01:50,957 - SecureStorage - INFO - New connection from ('127.0.0.1', 62996)
+2025-04-13 13:01:50,981 - SecureStorage - INFO - Action logged: list_files by user 5
+2025-04-13 13:07:38,780 - SecureStorage - INFO - New connection from ('127.0.0.1', 63112)
+2025-04-13 13:07:38,793 - SecureStorage - INFO - Action logged: user_login by user 5
+2025-04-13 13:07:40,818 - SecureStorage - INFO - New connection from ('127.0.0.1', 63113)
+2025-04-13 13:07:40,822 - SecureStorage - INFO - Action logged: list_files by user 5
+2025-04-13 13:07:54,396 - SecureStorage - INFO - New connection from ('127.0.0.1', 63115)
+2025-04-13 13:08:01,969 - SecureStorage - INFO - New connection from ('127.0.0.1', 63116)
+2025-04-13 13:08:01,972 - SecureStorage - ERROR - File download error: Incorrect number of bindings supplied. The current statement uses 3, and there are 4 supplied.
+2025-04-13 13:11:09,430 - SecureStorage - INFO - Server shutting down...
+2025-04-13 13:11:12,666 - SecureStorage - INFO - Server started on localhost:9999
+2025-04-13 13:11:21,964 - SecureStorage - INFO - New connection from ('127.0.0.1', 63154)
+2025-04-13 13:11:41,442 - SecureStorage - INFO - New connection from ('127.0.0.1', 63156)
+2025-04-13 13:12:10,582 - SecureStorage - INFO - New connection from ('127.0.0.1', 63159)
+2025-04-13 13:12:10,593 - SecureStorage - INFO - Action logged: user_login by user 5
+2025-04-13 13:12:15,690 - SecureStorage - INFO - New connection from ('127.0.0.1', 63160)
+2025-04-13 13:12:23,048 - SecureStorage - INFO - New connection from ('127.0.0.1', 63161)
+2025-04-13 13:12:28,229 - SecureStorage - INFO - New connection from ('127.0.0.1', 63162)
+2025-04-13 13:12:28,241 - SecureStorage - INFO - Action logged: list_files by user 5
+2025-04-13 13:12:43,589 - SecureStorage - INFO - New connection from ('127.0.0.1', 63164)
+2025-04-13 13:13:26,800 - SecureStorage - INFO - New connection from ('127.0.0.1', 63166)
+2025-04-13 13:13:26,808 - SecureStorage - INFO - Action logged: list_files by user 5
+2025-04-13 13:22:13,854 - SecureStorage - INFO - Server shutting down...
+2025-04-13 13:22:17,364 - SecureStorage - INFO - Server started on localhost:9999
+2025-04-13 13:22:23,460 - SecureStorage - INFO - New connection from ('127.0.0.1', 63262)
+2025-04-13 13:22:23,468 - SecureStorage - INFO - Action logged: list_files by user 5
+2025-04-13 13:22:41,172 - SecureStorage - INFO - New connection from ('127.0.0.1', 63266)
+2025-04-13 13:22:41,184 - SecureStorage - INFO - Action logged: user_login by user 5
+2025-04-13 13:22:42,270 - SecureStorage - INFO - New connection from ('127.0.0.1', 63267)
+2025-04-13 13:22:42,273 - SecureStorage - INFO - Action logged: list_files by user 5
+2025-04-13 13:22:44,848 - SecureStorage - INFO - New connection from ('127.0.0.1', 63268)
+2025-04-13 13:23:01,603 - SecureStorage - INFO - New connection from ('127.0.0.1', 63270)
+2025-04-13 13:23:01,614 - SecureStorage - INFO - Action logged: list_files by user 5
+2025-04-13 13:23:02,211 - SecureStorage - INFO - New connection from ('127.0.0.1', 63271)
+2025-04-13 13:23:05,322 - SecureStorage - INFO - New connection from ('127.0.0.1', 63272)
+2025-04-13 13:23:05,325 - SecureStorage - INFO - Action logged: list_files by user 5
+2025-04-13 13:23:06,233 - SecureStorage - INFO - New connection from ('127.0.0.1', 63273)
+2025-04-13 13:26:26,859 - SecureStorage - INFO - Server shutting down...
+2025-04-13 13:26:29,895 - SecureStorage - INFO - Server started on localhost:9999
+2025-04-13 13:26:32,840 - SecureStorage - INFO - New connection from ('127.0.0.1', 63297)
+2025-04-13 13:26:32,852 - SecureStorage - INFO - Action logged: list_files by user 5
+2025-04-13 13:26:34,189 - SecureStorage - INFO - New connection from ('127.0.0.1', 63298)
+2025-04-13 13:26:58,853 - SecureStorage - INFO - New connection from ('127.0.0.1', 63302)
+2025-04-13 13:26:58,865 - SecureStorage - INFO - Action logged: user_login by user 5
+2025-04-13 13:27:02,177 - SecureStorage - INFO - New connection from ('127.0.0.1', 63303)
+2025-04-13 13:27:02,182 - SecureStorage - INFO - Action logged: list_files by user 5
+2025-04-13 13:27:04,087 - SecureStorage - INFO - New connection from ('127.0.0.1', 63304)
+2025-04-13 13:35:22,980 - SecureStorage - INFO - Server shutting down...
+2025-04-13 13:35:26,680 - SecureStorage - INFO - Server started on localhost:9999
+2025-04-13 13:35:30,537 - SecureStorage - INFO - New connection from ('127.0.0.1', 63417)
+2025-04-13 13:35:30,553 - SecureStorage - INFO - Action logged: list_files by user 5
+2025-04-13 13:35:32,047 - SecureStorage - INFO - New connection from ('127.0.0.1', 63418)

@@ -14,6 +14,7 @@ import sqlite3
 import os
 import re
 import time
+import logging
 
 # 项目根目录和数据库路径
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
@@ -195,49 +196,25 @@ def upload_file(username, filename, file_content=None, file_path=None):
         return {"status": "error", "message": str(e)}
 
 
-def download_file(username, filename_or_id):
+def download_file(username, file_id):
+    """通过文件 ID 下载文件"""
     try:
-        # 检查输入是否为数字ID
-        is_file_id = isinstance(filename_or_id, int) or (isinstance(filename_or_id, str) and filename_or_id.isdigit())
-        
-        if is_file_id:
-            # 直接使用文件ID下载
-            file_id = filename_or_id
-            request = {"action": "download_file", "username": username, "file_id": file_id}
-        else:
-            # 通过文件名下载 - 先获取文件ID
-            safe_filename = sanitize_filename(filename_or_id)
-            
-            if safe_filename != filename_or_id:
-                print(f"安全文件名: '{safe_filename}'")
-            
-            # 先获取文件列表，查找对应文件ID
-            list_request = {"action": "list_files", "username": username}
-            list_response = send_request(list_request)
-            
-            if list_response.get("status") != "success":
-                return list_response  # 返回列表获取错误
-            
-            # 在自己的文件和共享文件中搜索
-            file_id = None
-            for file in list_response.get("files", []):
-                if file.get("filename") == safe_filename or file.get("original_filename") == safe_filename:
-                    file_id = file.get("file_id")
-                    break
-            
-            if file_id is None:
-                return {"status": "error", "message": f"找不到文件: {safe_filename}"}
-            
-            # 使用找到的文件ID下载
-            request = {"action": "download_file", "username": username, "file_id": file_id}
+        # 验证文件 ID
+        if not isinstance(file_id, (int, str)) or not str(file_id).isdigit():
+            return {"status": "error", "message": "Invalid file ID"}
+
+        file_id = int(file_id)
 
         # 发送下载请求
+        request = {"action": "download_file", "username": username, "file_id": file_id}
+        logger.debug(f"Sending download request: {request}")
         response = send_request(request)
+        logger.debug(f"Download response: {response}")
 
         if response.get("status") == "success":
             encrypted_package = json.loads(base64.b64decode(response["data"]).decode())
 
-            # AES解密
+            # 解密数据
             ciphertext = base64.b64decode(encrypted_package["ciphertext"])
             nonce = base64.b64decode(encrypted_package["nonce"])
             tag = base64.b64decode(encrypted_package["tag"])
@@ -246,40 +223,33 @@ def download_file(username, filename_or_id):
             key = derive_encryption_key(username)
             cipher = AES.new(key, AES.MODE_GCM, nonce=nonce)
 
-            # 准备关联数据（如果存在）
-            associated_data = json.dumps(file_metadata).encode() if file_metadata else None
+            # 解密并验证
+            decrypted_bytes = cipher.decrypt_and_verify(ciphertext, tag)
 
-            try:
-                decrypted_bytes = cipher.decrypt_and_verify(ciphertext, tag)
+            # 处理文件类型
+            file_type = file_metadata.get("file_type", "").lower() if file_metadata else ""
+            display_filename = file_metadata.get("original_filename", f"file_{file_id}")
 
-                # 处理文件类型
-                file_type = file_metadata.get("file_type", "").lower() if file_metadata else ""
-                display_filename = file_metadata.get("original_filename", "downloaded_file")
+            text_file_types = ['txt', 'md', 'py', 'java', 'c', 'cpp', 'js', 'html', 'css', 'xml', 'json']
 
-                # 文本文件类型列表
-                text_file_types = ['txt', 'md', 'py', 'java', 'c', 'cpp', 'js', 'html', 'css', 'xml', 'json']
+            if file_type in text_file_types:
+                decrypted_content = decrypted_bytes.decode('utf-8')
+                print(f"{username} 下载 {display_filename} 内容: {decrypted_content[:100]}...")
+                return {"status": "success", "data": decrypted_content, "binary": False}
+            else:
+                print(f"{username} 下载 {display_filename} (二进制文件, {len(decrypted_bytes)} 字节)")
+                return {"status": "success", "data": base64.b64encode(decrypted_bytes).decode(), "binary": True}
 
-                # 根据文件类型处理
-                if file_type in text_file_types:
-                    decrypted_content = decrypted_bytes.decode('utf-8')
-                    print(f"{username} download {display_filename} 内容: {decrypted_content[:100]}...")
-                    return {"status": "success", "data": decrypted_content, "binary": False}
-                else:
-                    # 二进制文件，保持字节格式
-                    print(f"{username} download {display_filename} (二进制文件, {len(decrypted_bytes)} 字节)")
-                    return {"status": "success", "data": base64.b64encode(decrypted_bytes).decode(), "binary": True}
-
-            except ValueError as e:
-                print(f"文件验证失败: {e}")
-                return {"status": "error", "message": "文件可能被篡改"}
-
-        # 处理下载失败
-        print(f"{username} download file: {response}")
+        # 下载失败
+        print(f"{username} 下载文件 ID {file_id}: {response}")
         return response
+
     except ValueError as e:
+        logger.error(f"下载错误: {e}")
         print(f"下载错误: {e}")
         return {"status": "error", "message": str(e)}
     except Exception as e:
+        logger.error(f"意外错误: {type(e).__name__}: {e}")
         print(f"意外错误: {e}")
         return {"status": "error", "message": str(e)}
 
@@ -356,6 +326,28 @@ def send_otp_to_phone(username, otp):
     except Exception as e:
         print(f"Error sending OTP: {e}")
         return False
+
+logging.basicConfig(level=logging.ERROR, format='%(asctime)s - %(name)s - %(levelname)s - %(message)s')
+logger = logging.getLogger('SecureStorage')
+def list_files(username):
+    """
+    List all files for the given user
+    """
+    try:
+        # 验证用户名
+        if not username or not isinstance(username, str):
+            return {"status": "error", "message": "Invalid username"}
+
+        # 构造请求
+        request = {"action": "list_files", "username": username}
+
+        # 发送请求
+        response = send_request(request)
+        return response
+
+    except Exception as e:
+        logger.error(f"List files error: {str(e)}")
+        return {"status": "error", "message": str(e)}
 
 
 if __name__ == "__main__":

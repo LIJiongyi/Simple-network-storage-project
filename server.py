@@ -2,7 +2,6 @@ import socket
 import json
 import sqlite3
 import time
-import datetime
 import threading
 import os
 import sys
@@ -13,6 +12,9 @@ import re
 import logging
 from concurrent.futures import ThreadPoolExecutor
 import pyotp  
+import datetime
+
+
 # Set up logging
 logging.basicConfig(
     level=logging.INFO,
@@ -579,6 +581,10 @@ def handle_upload_file(request, ip_address=None):
     
 
 
+# 设置日志
+logging.basicConfig(level=logging.ERROR, format='%(asctime)s - %(name)s - %(levelname)s - %(message)s')
+logger = logging.getLogger('SecureStorage')
+
 def handle_download_file(request, ip_address=None):
     """
     Handle file download request
@@ -586,41 +592,50 @@ def handle_download_file(request, ip_address=None):
     session_id = request.get("session_id")
     user_id = validate_session(session_id)
     username = validate_input(request.get("username"))
-
-    if not username:
-        return {"status": "error", "message": "Invalid or expired session"}
-
     file_id = request.get("file_id")
 
-    if not file_id:
-        return {"status": "error", "message": "Missing file ID"}
+    if not username or not file_id:
+        logger.debug(f"Invalid input: username={username}, file_id={file_id}")
+        return {"status": "error", "message": "Invalid or expired session"}
+
+    try:
+        file_id = int(file_id)  # 确保是整数
+    except (TypeError, ValueError):
+        logger.debug(f"Invalid file_id: {file_id}")
+        return {"status": "error", "message": "Invalid file ID"}
 
     try:
         conn = get_db_connection()
         cursor = conn.cursor()
 
-        # Check if user owns the file or has permission
+        # Debug: Verify user_id
+        cursor.execute("SELECT user_id FROM users WHERE username = ?", (username,))
+        user = cursor.fetchone()
+        if not user:
+            logger.debug(f"User not found: username={username}")
+            return {"status": "error", "message": "User not found"}
+        expected_user_id = user['user_id']
+        if user_id != expected_user_id:
+            logger.debug(f"Session user_id mismatch: session_user_id={user_id}, expected_user_id={expected_user_id}")
+            return {"status": "error", "message": "Session user mismatch"}
+
+        # Check if user owns the file
         cursor.execute("""
             SELECT f.file_id, f.filename, f.original_filename, f.file_path, f.owner_id
             FROM files f
-            WHERE f.file_id = ? AND f.is_deleted = 0 AND (f.owner_id = ? OR EXISTS (
-                SELECT 1 FROM file_permissions p WHERE p.file_id = f.file_id AND p.user_id = ?
-            ))
-        """, (file_id, user_id, user_id))
+            WHERE f.file_id = ? AND f.is_deleted = 0 AND f.owner_id = ?
+        """, (file_id, user_id))
 
         file = cursor.fetchone()
         if not file:
-            return {"status": "error", "message": "File not found or permission denied"}
+            logger.debug(f"File not found or not owned: file_id={file_id}, user_id={user_id}")
+            return {"status": "error", "message": "File not found or not owned"}
 
         # Get encryption key and IV
-        cursor.execute("""
-            SELECT key_encrypted, iv
-            FROM file_keys
-            WHERE file_id = ?
-        """, (file_id,))
-
+        cursor.execute("SELECT key_encrypted, iv FROM file_keys WHERE file_id = ?", (file['file_id'],))
         key_data = cursor.fetchone()
         if not key_data:
+            logger.debug(f"Encryption key not found for file_id={file['file_id']}")
             return {"status": "error", "message": "Encryption key not found"}
 
         # Read the encrypted file
@@ -630,22 +645,35 @@ def handle_download_file(request, ip_address=None):
         # Log the download
         log_action(user_id, "file_download", f"Downloaded file: {file['original_filename']}", ip_address)
 
-        # Return encrypted data and key information
+        # Prepare encrypted package
+        encrypted_package = {
+            "ciphertext": base64.b64encode(encrypted_data).decode(),
+            "nonce": key_data['iv'],
+            "tag": key_data['key_encrypted'],
+            "metadata": {
+                "original_filename": file['original_filename'],
+                "file_type": os.path.splitext(file['original_filename'])[1].lstrip('.').lower()
+            }
+        }
+
+        # Return encrypted package as Base64-encoded JSON
         return {
             "status": "success",
             "message": "File download successful",
-            "file_id": file['file_id'],
-            "filename": file['original_filename'],
-            "encrypted_key": key_data['key_encrypted'],
-            "iv": key_data['iv'],
-            "encrypted_data": base64.b64encode(encrypted_data).decode('utf-8')
+            "data": base64.b64encode(json.dumps(encrypted_package).encode()).decode()
         }
+
+    except sqlite3.Error as e:
+        logger.error(f"Database error: {e}")
+        return {"status": "error", "message": f"Database error: {str(e)}"}
+    except FileNotFoundError as e:
+        logger.error(f"File not found: {e}")
+        return {"status": "error", "message": f"File not found: {str(e)}"}
     except Exception as e:
-        logger.error(f"File download error: {e}")
-        return {"status": "error", "message": "File download failed"}
+        logger.error(f"Unexpected error: {type(e).__name__}: {e}")
+        return {"status": "error", "message": f"Unexpected error: {str(e)}"}
     finally:
         close_connection(conn)
-
 
 def handle_delete_file(request, ip_address=None):
     """
@@ -774,129 +802,91 @@ def handle_share_file(request, ip_address=None):
         close_connection(conn)
 
 
-def handle_list_files(request, ip_address=None):
+def list_user_files(request):
     """
-    Handle request to list user's files
+    List all non-deleted files for a given user
     """
-    session_id = request.get("session_id")
-    user_id = validate_session(session_id)
-
-    if not user_id:
-        return {"status": "error", "message": "Invalid or expired session"}
-
     try:
+        # 验证用户名
+        username = validate_input(request.get("username"))
+        if not username:
+            return {"status": "error", "message": "Invalid username"}
+
+        # 获取数据库连接
         conn = get_db_connection()
         cursor = conn.cursor()
 
-        # Get own files
+        # 查询用户ID
+        cursor.execute("SELECT user_id FROM users WHERE username = ?", (username,))
+        user = cursor.fetchone()
+        if not user:
+            return {"status": "error", "message": "User not found"}
+
+        user_id = user['user_id']
+
+        # 查询用户的所有未删除文件
         cursor.execute("""
-            SELECT file_id, original_filename, upload_date, last_modified, file_size, 'owner' as type
+            SELECT file_id, original_filename, file_size, upload_date, last_modified
             FROM files
             WHERE owner_id = ? AND is_deleted = 0
-            ORDER BY last_modified DESC
+            ORDER BY upload_date DESC
         """, (user_id,))
+        
+        files = cursor.fetchall()
 
-        own_files = [dict(row) for row in cursor.fetchall()]
+        # 格式化文件列表
+        file_list = []
+        for file in files:
+            upload_date = file['upload_date']
+            last_modified = file['last_modified']
+            
+            # 处理字符串日期
+            if isinstance(upload_date, str):
+                try:
+                    # 首先尝试带毫秒的格式
+                    upload_date = datetime.datetime.strptime(upload_date, "%Y-%m-%d %H:%M:%S.%f")
+                except ValueError:
+                    try:
+                        # 回退到无毫秒的格式
+                        upload_date = datetime.datetime.strptime(upload_date, "%Y-%m-%d %H:%M:%S")
+                    except ValueError as e:
+                        logger.error(f"Invalid upload_date format: {upload_date}, error: {e}")
+                        upload_date = datetime.datetime.now()  # 备用值
+            if isinstance(last_modified, str):
+                try:
+                    # 首先尝试带毫秒的格式
+                    last_modified = datetime.datetime.strptime(last_modified, "%Y-%m-%d %H:%M:%S.%f")
+                except ValueError:
+                    try:
+                        # 回退到无毫秒的格式
+                        last_modified = datetime.datetime.strptime(last_modified, "%Y-%m-%d %H:%M:%S")
+                    except ValueError as e:
+                        logger.error(f"Invalid last_modified format: {last_modified}, error: {e}")
+                        last_modified = datetime.datetime.now()  # 备用值
+                
+            file_list.append({
+                "file_id": file['file_id'],
+                "filename": file['original_filename'],
+                "file_size": file['file_size'],
+                "upload_date": upload_date.isoformat(),
+                "last_modified": last_modified.isoformat()
+            })
 
-        # Get shared files
-        cursor.execute("""
-            SELECT f.file_id, f.original_filename, f.upload_date, f.last_modified, f.file_size, 
-                   'shared' as type, u.username as owner
-            FROM files f
-            JOIN file_permissions p ON f.file_id = p.file_id
-            JOIN users u ON f.owner_id = u.user_id
-            WHERE p.user_id = ? AND f.is_deleted = 0
-            ORDER BY p.granted_date DESC
-        """, (user_id,))
-
-        shared_files = [dict(row) for row in cursor.fetchall()]
-
-        # Log the listing
-        log_action(user_id, "list_files", "Listed files", ip_address)
+        # 记录日志
+        log_action(user_id, "list_files", f"Listed all files for user {username}")
 
         return {
             "status": "success",
             "message": "Files retrieved successfully",
-            "own_files": own_files,
-            "shared_files": shared_files
+            "files": file_list
         }
+
     except Exception as e:
-        logger.error(f"List files error: {e}")
-        return {"status": "error", "message": "Failed to retrieve files"}
+        logger.error(f"List files error: {type(e).__name__}: {e}")
+        return {"status": "error", "message": f"Failed to retrieve files: {str(e)}"}
     finally:
         close_connection(conn)
 
-
-def handle_partial_update(request, ip_address=None):
-    """
-    Handle partial file update (efficient update without reuploading entire file)
-    This is one of the EXTENDED functionalities
-    """
-    session_id = request.get("session_id")
-    user_id = validate_session(session_id)
-
-    if not user_id:
-        return {"status": "error", "message": "Invalid or expired session"}
-
-    file_id = request.get("file_id")
-    start_position = request.get("start_position")
-    encrypted_chunk_base64 = request.get("encrypted_chunk")
-
-    if not file_id or start_position is None or not encrypted_chunk_base64:
-        return {"status": "error", "message": "Missing required information"}
-
-    try:
-        encrypted_chunk = base64.b64decode(encrypted_chunk_base64)
-
-        conn = get_db_connection()
-        cursor = conn.cursor()
-
-        # Check if user owns the file
-        cursor.execute("""
-            SELECT file_id, file_path, original_filename, file_size
-            FROM files
-            WHERE file_id = ? AND owner_id = ? AND is_deleted = 0
-        """, (file_id, user_id))
-
-        file = cursor.fetchone()
-        if not file:
-            return {"status": "error", "message": "File not found or you don't have permission to update"}
-
-        # Update the file with the new chunk
-        with open(file['file_path'], 'r+b') as f:
-            f.seek(start_position)
-            f.write(encrypted_chunk)
-
-        # Calculate new file size
-        new_size = max(file['file_size'], start_position + len(encrypted_chunk))
-
-        # Update file metadata
-        cursor.execute("""
-            UPDATE files
-            SET last_modified = ?, file_size = ?
-            WHERE file_id = ?
-        """, (datetime.datetime.now(), new_size, file_id))
-
-        conn.commit()
-
-        # Log the partial update
-        log_action(
-            user_id,
-            "file_partial_update",
-            f"Partially updated file: {file['original_filename']}",
-            ip_address
-        )
-
-        return {
-            "status": "success",
-            "message": "File partially updated successfully",
-            "new_size": new_size
-        }
-    except Exception as e:
-        logger.error(f"Partial update error: {e}")
-        return {"status": "error", "message": "Partial update failed"}
-    finally:
-        close_connection(conn)
 
 
 def handle_view_logs(request, ip_address=None):
@@ -1040,9 +1030,7 @@ def handle_client(client_socket, addr):
         elif action == "share_file":
             response = handle_share_file(request, ip_address)
         elif action == "list_files":
-            response = handle_list_files(request, ip_address)
-        elif action == "partial_update":
-            response = handle_partial_update(request, ip_address)
+            response = list_user_files(request)
         elif action == "view_logs":
             response = handle_view_logs(request, ip_address)
         elif action == "logout":
