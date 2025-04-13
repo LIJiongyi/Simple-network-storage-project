@@ -25,6 +25,24 @@ HOST = 'localhost'
 PORT = 9999
 
 
+# 在文件顶部引入其他库的地方添加
+_session_tokens = {}  # 按用户名存储会话数据
+
+def store_session(username, session_data):
+    """存储用户的会话令牌和数据"""
+    _session_tokens[username] = session_data
+    
+def get_session_token(username):
+    """获取用户的会话令牌"""
+    if username in _session_tokens:
+        return _session_tokens[username].get("session_id")
+    return None
+
+def clear_session(username):
+    """清除用户会话"""
+    if username in _session_tokens:
+        del _session_tokens[username]
+
 def send_request(request):
     """发送请求到服务器并接收响应"""
     try:
@@ -57,23 +75,42 @@ def login_user(username, password, otp):
                "otp_code": otp}
     response = send_request(request)
     print(f"登录 {username}: {response}")
+    
+    # 如果登录成功，存储会话数据
+    if response.get("status") == "success" and "session_id" in response:
+        store_session(username, {
+            "session_id": response.get("session_id"),
+            "user_id": response.get("user_id", "")
+        })
+        
     return response
 
 
 def reset_password(username, old_password, new_password):
     """重置密码"""
+
+    session_id = get_session_token(username)
+    if not session_id:
+        return {"status": "error", "message": "session expired or not found"}
     old_password_hash = hashlib.sha256(old_password.encode()).hexdigest()
     new_password_hash = hashlib.sha256(new_password.encode()).hexdigest()
     request = {
         "action": "reset_password",
         "username": username,
         "old_password_hash": old_password_hash,
-        "new_password_hash": new_password_hash
+        "new_password_hash": new_password_hash,
+        "session_id": session_id
     }
     response = send_request(request)
     print(f"重置 {username} 密码: {response}")
+    
+    if response.get("status") == "success":
+        # 如果服务器要求重新登录，清除当前会话
+        if response.get("require_relogin"):
+            clear_session(username)
+            print(f"密码已重置，请使用新密码重新登录")
+    
     return response
-
 
 def sanitize_filename(filename):  # 用来防止路径遍历攻击
     base_filename = os.path.basename(filename)
@@ -197,7 +234,7 @@ def upload_file(username, filename, file_content=None, file_path=None):
 
 
 def download_file(username, file_id):
-    """通过文件 ID 下载文件"""
+    """通过文件 ID 下载文件并保存到 download 文件夹"""
     try:
         # 验证文件 ID
         if not isinstance(file_id, (int, str)) or not str(file_id).isdigit():
@@ -211,38 +248,57 @@ def download_file(username, file_id):
         response = send_request(request)
         logger.debug(f"Download response: {response}")
 
-        if response.get("status") == "success":
-            encrypted_package = json.loads(base64.b64decode(response["data"]).decode())
+        if response.get("status") != "success":
+            print(f"{username} 下载文件 ID {file_id}: {response.get('message', '未知错误')}")
+            return response
 
-            # 解密数据
-            ciphertext = base64.b64decode(encrypted_package["ciphertext"])
-            nonce = base64.b64decode(encrypted_package["nonce"])
-            tag = base64.b64decode(encrypted_package["tag"])
-            file_metadata = encrypted_package.get("metadata", {})
+        # 解析加密包
+        encrypted_package = json.loads(base64.b64decode(response["data"]).decode())
 
-            key = derive_encryption_key(username)
-            cipher = AES.new(key, AES.MODE_GCM, nonce=nonce)
+        # 提取数据
+        ciphertext = base64.b64decode(encrypted_package["ciphertext"])
+        nonce = base64.b64decode(encrypted_package["nonce"])
+        tag = base64.b64decode(encrypted_package["tag"])
+        file_metadata = encrypted_package.get("metadata", {})
 
-            # 解密并验证
-            decrypted_bytes = cipher.decrypt_and_verify(ciphertext, tag)
+        # 获取文件类型和文件名
+        file_type = file_metadata.get("file_type", "").lower()
+        display_filename = file_metadata.get("original_filename", f"file_{file_id}")
 
-            # 处理文件类型
-            file_type = file_metadata.get("file_type", "").lower() if file_metadata else ""
-            display_filename = file_metadata.get("original_filename", f"file_{file_id}")
+        # 只处理 .txt 文件
+        if file_type != "txt":
+            print(f"仅支持下载 .txt 文件，当前文件类型: {file_type}")
+            return {"status": "error", "message": f"Only .txt files are supported, got: {file_type}"}
 
-            text_file_types = ['txt', 'md', 'py', 'java', 'c', 'cpp', 'js', 'html', 'css', 'xml', 'json']
+        # 解密数据
+        key = derive_encryption_key(username)
+        cipher = AES.new(key, AES.MODE_GCM, nonce=nonce)
+        decrypted_bytes = cipher.decrypt_and_verify(ciphertext, tag)
+        decrypted_content = decrypted_bytes.decode('utf-8')  # 转换为字符串
 
-            if file_type in text_file_types:
-                decrypted_content = decrypted_bytes.decode('utf-8')
-                print(f"{username} 下载 {display_filename} 内容: {decrypted_content[:100]}...")
-                return {"status": "success", "data": decrypted_content, "binary": False}
-            else:
-                print(f"{username} 下载 {display_filename} (二进制文件, {len(decrypted_bytes)} 字节)")
-                return {"status": "success", "data": base64.b64encode(decrypted_bytes).decode(), "binary": True}
+        # 创建 download 文件夹
+        download_dir = os.path.join(BASE_DIR, "download")
+        os.makedirs(download_dir, exist_ok=True)
 
-        # 下载失败
-        print(f"{username} 下载文件 ID {file_id}: {response}")
-        return response
+        # 处理文件名冲突
+        def get_unique_filename(directory, filename):
+            base, ext = os.path.splitext(filename)
+            counter = 1
+            new_filename = filename
+            while os.path.exists(os.path.join(directory, new_filename)):
+                new_filename = f"{base} ({counter}){ext}"
+                counter += 1
+            return new_filename
+
+        unique_filename = get_unique_filename(download_dir, display_filename)
+        file_path = os.path.join(download_dir, unique_filename)
+
+        # 保存文件
+        with open(file_path, 'w', encoding='utf-8') as f:
+            f.write(decrypted_content)
+
+        print(f"{username} 下载 {display_filename} 已保存到: {file_path}")
+        return {"status": "success", "message": f"File saved to {file_path}"}
 
     except ValueError as e:
         logger.error(f"下载错误: {e}")
@@ -252,6 +308,7 @@ def download_file(username, file_id):
         logger.error(f"意外错误: {type(e).__name__}: {e}")
         print(f"意外错误: {e}")
         return {"status": "error", "message": str(e)}
+
 
 
 def edit_file(username, filename, new_content):
@@ -348,71 +405,3 @@ def list_files(username):
     except Exception as e:
         logger.error(f"List files error: {str(e)}")
         return {"status": "error", "message": str(e)}
-
-
-if __name__ == "__main__":
-    print("开始自动化测试...")
-
-    # 测试管理员登录
-    admin_otp = get_otp("admin")
-    if admin_otp:
-        login_user("admin", "admin123", admin_otp)
-    else:
-        print("无法获取 admin OTP，跳过管理员登录")
-
-    # 测试用户注册
-    register_user("user1", "password123")
-    register_user("user2", "password456")
-
-    # 测试用户登录
-    user1_otp = get_otp("user1")
-    if user1_otp:
-        login_user("user1", "password123", user1_otp)
-    else:
-        print("无法获取 user1 OTP，跳过登录")
-
-    # 测试密码重置
-    if user1_otp:
-        reset_password("user1", "password123", "newpass123")
-        user1_new_otp = get_otp("user1")
-        if user1_new_otp:
-            login_user("user1", "newpass123", user1_new_otp)
-        else:
-            print("无法获取 user1 新 OTP，跳过新密码登录")
-
-    # 测试文件上传
-    upload_file("user1", "test.txt", "这是一个测试文件。")
-
-    # 测试文件下载（拥有者）
-    download_file("user1", "test.txt")
-
-    # 测试文件编辑
-    edit_file("user1", "test.txt", "这是编辑后的测试文件。")
-    download_file("user1", "test.txt")
-
-    # 测试文件分享
-    user2_otp = get_otp("user2")
-    if user2_otp:
-        login_user("user2", "password456", user2_otp)
-        share_file("user1", "test.txt", "user2")
-        download_file("user2", "test.txt")
-    else:
-        print("无法获取 user2 OTP,跳过分享和下载")
-
-    # 测试文件删除
-    delete_file("user1", "test.txt")
-    download_file("user1", "test.txt")  # 应返回未找到
-
-    # 测试管理员查看日志
-    if admin_otp:
-        view_logs("admin")
-    else:
-        print("无法获取 admin OTP,跳过查看日志")
-
-    # 测试非法文件名
-    upload_file("user1", "../test.txt", "非法文件名测试")
-
-    print("自动化测试完成")
-
-    # start CLI
-    # user_cli()

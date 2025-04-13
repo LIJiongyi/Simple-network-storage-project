@@ -13,7 +13,8 @@ import logging
 from concurrent.futures import ThreadPoolExecutor
 import pyotp  
 import datetime
-
+SESSION_TIMEOUT = 7200  # 会话超时时间（秒）
+sessions = {}
 
 # Set up logging
 logging.basicConfig(
@@ -89,6 +90,42 @@ def check_rate_limit(ip_address):
 
     # Increment the counter and allow the request
     tracker['count'] += 1
+    return True
+
+
+def generate_random_token():
+    """生成安全的随机会话令牌"""
+    return secrets.token_hex(32)
+
+
+def create_session(user_id, username):  # used for login
+    session_id = generate_random_token()  # 生成随机令牌
+    current_time = time.time()
+    expiry = current_time + SESSION_TIMEOUT
+    sessions[session_id] = {"user_id": user_id, "username": username, "expiry": expiry}
+    return session_id
+    return secrets.token_hex(32)
+    
+def validate_session(session_id, username=None):
+    """验证会话令牌有效性"""
+    current_time = time.time()
+    if session_id not in sessions:
+        return False
+        
+    session = sessions[session_id]
+    # 如果提供了用户名，则检查用户名匹配
+    if username and session["username"] != username:
+        return False
+        
+    # 检查会话是否过期
+    if session["expiry"] < current_time:
+        # 清除过期会话
+        del sessions[session_id]
+        return False
+        
+    # 如果只需要验证会话而不需要验证用户名，则返回用户ID
+    if not username:
+        return session["user_id"]
     return True
 
 
@@ -176,84 +213,6 @@ def validate_input(data, regex_pattern=None):
         return None
 
     return data
-
-def create_session(user_id, ip_address=None, user_agent=None):
-    """
-    Create a new session for a user and return the session ID
-    """
-    try:
-        conn = get_db_connection()
-        cursor = conn.cursor()
-
-        # Generate a secure random session ID
-        session_id = secrets.token_hex(32)
-
-        # Set expiry time
-        created_at = datetime.datetime.now()
-        expires_at = created_at + datetime.timedelta(seconds=TOKEN_EXPIRY)
-
-        # Remove any existing sessions for this user
-        cursor.execute("DELETE FROM sessions WHERE user_id = ?", (user_id,))
-
-        # Create new session
-        cursor.execute("""
-            INSERT INTO sessions 
-            (session_id, user_id, created_at, expires_at, ip_address, user_agent) 
-            VALUES (?, ?, ?, ?, ?, ?)
-        """, (session_id, user_id, created_at, expires_at, ip_address, user_agent))
-
-        conn.commit()
-        return session_id
-    except Exception as e:
-        logger.error(f"Error creating session: {e}")
-        return None
-    finally:
-        close_connection(conn)
-
-
-def validate_session(session_id, user_id=None):
-    """
-    Validate a session ID
-    Returns user_id if valid, None otherwise
-    """
-    if not session_id:
-        return None
-
-    try:
-        conn = get_db_connection()
-        cursor = conn.cursor()
-
-        # Get session information
-        cursor.execute("""
-            SELECT user_id, expires_at 
-            FROM sessions 
-            WHERE session_id = ?
-        """, (session_id,))
-
-        session = cursor.fetchone()
-
-        # Check if session exists and hasn't expired
-        if not session:
-            return None
-
-        expires_at = datetime.datetime.fromisoformat(session['expires_at'])
-        if expires_at < datetime.datetime.now():
-            # Session expired, delete it
-            cursor.execute("DELETE FROM sessions WHERE session_id = ?", (session_id,))
-            conn.commit()
-            return None
-
-        # If user_id is provided, verify it matches the session
-        if user_id and session['user_id'] != user_id:
-            return None
-
-        return session['user_id']
-    except Exception as e:
-        logger.error(f"Error validating session: {e}")
-        return None
-    finally:
-        close_connection(conn)
-
 
 def handle_register(request, ip_address=None):
     """
@@ -388,7 +347,7 @@ def handle_login(request, ip_address=None):
                 return {"status": "error", "message": "Invalid OTP code"}
 
         # Create a new session
-        session_id = create_session(user['user_id'], ip_address)
+        session_id = create_session(user['user_id'], username)
 
         # Update last login time
         cursor.execute("""
@@ -424,42 +383,45 @@ def handle_reset_password(request, ip_address=None):
     """
     Handle password reset request
     """
-    username= validate_input(request.get("username"))
-
-    if not username:
-        return {"status": "error", "message": "Invalid or expired session"}
+    # 获取并验证会话令牌
+    session_id = request.get("session_id")
+    username = validate_input(request.get("username"))
+    
+    # 验证会话有效性
+    if not validate_session(session_id, username):
+        return {"status": "error", "message": "无效或已过期的会话，请重新登录"}
 
     old_password_hash = request.get("old_password_hash")
     new_password_hash = request.get("new_password_hash")
 
     if not old_password_hash or not new_password_hash:
-        return {"status": "error", "message": "Missing password data"}
+        return {"status": "error", "message": "缺少密码数据"}
 
     try:
         conn = get_db_connection()
         cursor = conn.cursor()
 
-        # Get current password information
+        # 获取当前密码信息
         cursor.execute("""
-            SELECT password_hash, salt 
+            SELECT user_id, password_hash, salt 
             FROM users 
             WHERE username = ?
         """, (username,))
 
         user = cursor.fetchone()
         if not user:
-            return {"status": "error", "message": "User not found"}
+            return {"status": "error", "message": "用户不存在"}
 
-        # Verify old password
+        # 验证旧密码
         expected_hash = hashlib.sha256((old_password_hash + user['salt']).encode()).hexdigest()
         if expected_hash != user['password_hash']:
-            return {"status": "error", "message": "Current password is incorrect"}
+            return {"status": "error", "message": "当前密码不正确"}
 
-        # Generate new salt and hash for the new password
+        # 生成新的盐值和哈希
         new_salt = secrets.token_hex(16)
         final_new_hash = hashlib.sha256((new_password_hash + new_salt).encode()).hexdigest()
 
-        # Update password
+        # 更新密码
         cursor.execute("""
             UPDATE users 
             SET password_hash = ?, salt = ? 
@@ -468,13 +430,18 @@ def handle_reset_password(request, ip_address=None):
 
         conn.commit()
 
-        # Log the password reset
-        log_action(username, "password_reset", "Password was reset", ip_address)
+        # 记录密码重置操作
+        log_action(user['user_id'], "password_reset", "密码已重置", ip_address)
 
-        return {"status": "success", "message": "Password reset successful"}
+        # 告知客户端需要重新登录
+        return {
+            "status": "success", 
+            "message": "密码重置成功",
+            "require_relogin": True  # 添加此标志通知客户端需要重新登录
+        }
     except Exception as e:
-        logger.error(f"Password reset error: {e}")
-        return {"status": "error", "message": "Password reset failed"}
+        logger.error(f"密码重置错误: {e}")
+        return {"status": "error", "message": "密码重置失败"}
     finally:
         close_connection(conn)
 
@@ -589,14 +556,12 @@ def handle_download_file(request, ip_address=None):
     """
     Handle file download request
     """
-    session_id = request.get("session_id")
-    user_id = validate_session(session_id)
     username = validate_input(request.get("username"))
     file_id = request.get("file_id")
 
     if not username or not file_id:
         logger.debug(f"Invalid input: username={username}, file_id={file_id}")
-        return {"status": "error", "message": "Invalid or expired session"}
+        return {"status": "error", "message": "Invalid username or file ID"}
 
     try:
         file_id = int(file_id)  # 确保是整数
@@ -608,16 +573,13 @@ def handle_download_file(request, ip_address=None):
         conn = get_db_connection()
         cursor = conn.cursor()
 
-        # Debug: Verify user_id
+        # 获取 user_id
         cursor.execute("SELECT user_id FROM users WHERE username = ?", (username,))
         user = cursor.fetchone()
         if not user:
             logger.debug(f"User not found: username={username}")
             return {"status": "error", "message": "User not found"}
-        expected_user_id = user['user_id']
-        if user_id != expected_user_id:
-            logger.debug(f"Session user_id mismatch: session_user_id={user_id}, expected_user_id={expected_user_id}")
-            return {"status": "error", "message": "Session user mismatch"}
+        user_id = user['user_id']
 
         # Check if user owns the file
         cursor.execute("""
@@ -639,28 +601,47 @@ def handle_download_file(request, ip_address=None):
             return {"status": "error", "message": "Encryption key not found"}
 
         # Read the encrypted file
+        if not os.path.exists(file['file_path']):
+            logger.error(f"File path does not exist: {file['file_path']}")
+            return {"status": "error", "message": "File not found on server"}
         with open(file['file_path'], 'rb') as f:
             encrypted_data = f.read()
 
-        # Log the download
-        log_action(user_id, "file_download", f"Downloaded file: {file['original_filename']}", ip_address)
+        # Verify and clean Base64 encoding for nonce and tag
+        try:
+            nonce_clean = base64.b64encode(base64.b64decode(key_data['iv'], validate=True)).decode('utf-8')
+            tag_clean = base64.b64encode(base64.b64decode(key_data['key_encrypted'], validate=True)).decode('utf-8')
+        except base64.binascii.Error as e:
+            logger.error(f"Invalid Base64 data: iv={key_data['iv']}, key_encrypted={key_data['key_encrypted']}, error: {e}")
+            return {"status": "error", "message": f"Invalid encryption data: {str(e)}"}
 
         # Prepare encrypted package
         encrypted_package = {
-            "ciphertext": base64.b64encode(encrypted_data).decode(),
-            "nonce": key_data['iv'],
-            "tag": key_data['key_encrypted'],
+            "ciphertext": base64.b64encode(encrypted_data).decode('utf-8'),
+            "nonce": nonce_clean,
+            "tag": tag_clean,
             "metadata": {
                 "original_filename": file['original_filename'],
                 "file_type": os.path.splitext(file['original_filename'])[1].lstrip('.').lower()
             }
         }
 
+        # Log the download
+        log_action(user_id, "file_download", f"Downloaded file: {file['original_filename']}", ip_address)
+
+        # Encode JSON and verify
+        try:
+            json_str = json.dumps(encrypted_package)
+            logger.debug(f"Encrypted package JSON: {json_str[:100]}...")
+        except TypeError as e:
+            logger.error(f"JSON encoding error: {e}, package content: {encrypted_package}")
+            return {"status": "error", "message": f"JSON encoding error: {str(e)}"}
+
         # Return encrypted package as Base64-encoded JSON
         return {
             "status": "success",
             "message": "File download successful",
-            "data": base64.b64encode(json.dumps(encrypted_package).encode()).decode()
+            "data": base64.b64encode(json_str.encode('utf-8')).decode('utf-8')
         }
 
     except sqlite3.Error as e:
