@@ -8,6 +8,7 @@ import logging
 import sqlite3
 import hashlib
 import pyotp
+import shutil
 from Crypto.Cipher import AES
 from Crypto.Random import get_random_bytes
 from Crypto.Protocol.KDF import PBKDF2
@@ -450,20 +451,178 @@ def upload_file(username, filename, file_content=None, file_path=None):
         print(f"Encryption or upload error: {e}")
         return {"status": "error", "message": str(e)}
 
-def edit_file(username, filename, new_content):
-    new_data = base64.b64encode(new_content.encode()).decode()
-    request = {"action": "edit_file", "username": username, "filename": filename, "data": new_data}
-    response = send_request(request)
-    print(f"{username} edit {filename}: {response}")
-    return response
+def edit_file(username, file_id):
+    """
+    Edit a .txt file by downloading it to a temporary folder 'editingfile',
+    allowing user to edit, then uploading the modified content to overwrite the original file.
+    """
+    try:
+        # Verify file_id
+        if not isinstance(file_id, (int, str)) or not str(file_id).isdigit():
+            return {"status": "error", "message": "Invalid file ID"}
+        file_id = int(file_id)
+
+        # Send download request
+        request = {"action": "download_file", "username": username, "file_id": file_id}
+        logger.debug(f"Sending download request: {request}")
+        response = send_request(request)
+        logger.debug(f"Download response: {response}")
+
+        if response.get("status") != "success":
+            print(f"{username} 下载文件 ID {file_id}: {response.get('message', '未知错误')}")
+            return response
+
+        # Parse encrypted package
+        encrypted_package = json.loads(base64.b64decode(response["data"]).decode())
+        ciphertext = base64.b64decode(encrypted_package["ciphertext"])
+        nonce = base64.b64decode(encrypted_package["nonce"])
+        tag = base64.b64decode(encrypted_package["tag"])
+        file_metadata = encrypted_package.get("metadata", {})
+
+        # Verify file type
+        file_type = file_metadata.get("file_type", "").lower()
+        if file_type != "txt":
+            print(f"仅支持编辑 .txt 文件，当前文件类型: {file_type}")
+            return {"status": "error", "message": f"Only .txt files can be edited, got: {file_type}"}
+
+        # Decrypt content
+        key = derive_encryption_key(username)
+        cipher = AES.new(key, AES.MODE_GCM, nonce=nonce)
+        decrypted_bytes = cipher.decrypt_and_verify(ciphertext, tag)
+        decrypted_content = decrypted_bytes.decode('utf-8')
+
+        # Create temporary editing folder
+        temp_dir = os.path.join(BASE_DIR, "editingfile")
+        os.makedirs(temp_dir, exist_ok=True)
+
+        # Save file to editingfile folder
+        display_filename = file_metadata.get("original_filename", f"file_{file_id}.txt")
+        temp_file_path = os.path.join(temp_dir, sanitize_filename(display_filename))
+        with open(temp_file_path, 'w', encoding='utf-8') as f:
+            f.write(decrypted_content)
+
+        # Prompt user to edit
+        print(f"\n请在文件夹 '{temp_dir}' 中修改文件 '{display_filename}'。")
+        print("修改完成后，请输入 '1' 并按回车继续。")
+        while True:
+            user_input = input("输入: ").strip()
+            if user_input == "1":
+                break
+            print("请输入 '1' 以继续。")
+
+        # Read modified content
+        try:
+            with open(temp_file_path, 'r', encoding='utf-8') as f:
+                new_content = f.read()
+        except (IOError, UnicodeDecodeError) as e:
+            shutil.rmtree(temp_dir, ignore_errors=True)
+            return {"status": "error", "message": f"Failed to read modified file: {str(e)}"}
+
+        # Re-encrypt new content
+        nonce = get_random_bytes(12)
+        cipher = AES.new(key, AES.MODE_GCM, nonce=nonce)
+        ciphertext, tag = cipher.encrypt_and_digest(new_content.encode('utf-8'))
+
+        # Prepare encrypted package
+        encrypted_package = {
+            "ciphertext": base64.b64encode(ciphertext).decode(),
+            "nonce": base64.b64encode(nonce).decode(),
+            "tag": base64.b64encode(tag).decode(),
+            "metadata": {
+                "original_filename": display_filename,
+                "file_type": "txt",
+                "timestamp": time.time()
+            }
+        }
+        encrypted_data = base64.b64encode(json.dumps(encrypted_package).encode()).decode()
+
+        # Send edit request
+        request = {
+            "action": "edit_file",
+            "username": username,
+            "file_id": file_id,
+            "data": encrypted_data
+        }
+        response = send_request(request)
+        print(f"{username} 编辑文件 ID {file_id}: {response.get('message', '未知错误')}")
+
+        # Clean up
+        shutil.rmtree(temp_dir, ignore_errors=True)
+
+        return response
+
+    except ValueError as e:
+        logger.error(f"Edit error: {e}")
+        print(f"Edit error: {e}")
+        shutil.rmtree(os.path.join(BASE_DIR, "editingfile"), ignore_errors=True)
+        return {"status": "error", "message": str(e)}
+    except Exception as e:
+        logger.error(f"Unexpected error: {type(e).__name__}: {e}")
+        print(f"Unexpected error: {e}")
+        shutil.rmtree(os.path.join(BASE_DIR, "editingfile"), ignore_errors=True)
+        return {"status": "error", "message": str(e)}
 
 
-def delete_file(username, filename):
-    request = {"action": "delete_file", "username": username, "filename": filename}
-    response = send_request(request)
-    print(f"{username} delete {filename}: {response}")
-    return response
+def delete_file(username):
+    """
+    List all files for the user and allow permanent deletion by file_id
+    """
+    try:
+        # List user files
+        result = list_files(username)
+        if result.get("status") != "success":
+            print(f"获取文件列表失败: {result.get('message', '未知错误')}")
+            return result
 
+        files = result.get("files", [])
+        if not files:
+            print("没有找到文件。")
+            return {"status": "success", "message": "No files to delete"}
+
+        # Display file list
+        print("\n文件列表:")
+        print("-" * 50)
+        for file in files:
+            print(f"文件 ID: {file['file_id']}")
+            print(f"文件名: {file['filename']}")
+            print(f"大小: {file['file_size']} 字节")
+            print(f"上传时间: {file['upload_date']}")
+            print(f"最后修改: {file['last_modified']}")
+            print("-" * 50)
+
+        # Prompt for file_id
+        file_id = input_with_validation("请输入要删除的文件 ID: ")
+        if not file_id.isdigit():
+            print("无效的文件 ID，必须是数字。")
+            return {"status": "error", "message": "Invalid file ID"}
+
+        file_id = int(file_id)
+
+        # Verify file_id exists
+        valid_ids = [file["file_id"] for file in files]
+        if file_id not in valid_ids:
+            print("文件 ID 不存在，请检查输入。")
+            return {"status": "error", "message": "File ID not found"}
+
+        # Send delete request
+        request = {
+            "action": "delete_file",
+            "username": username,
+            "file_id": file_id
+        }
+        response = send_request(request)
+        print(f"{username} 删除文件 ID {file_id}: {response.get('message', '未知错误')}")
+
+        return response
+
+    except ValueError as e:
+        logger.error(f"Delete error: {e}")
+        print(f"删除错误: {e}")
+        return {"status": "error", "message": str(e)}
+    except Exception as e:
+        logger.error(f"Unexpected error: {type(e).__name__}: {e}")
+        print(f"意外错误: {e}")
+        return {"status": "error", "message": str(e)}
 
 def share_file(username, filename, share_with):
     request = {"action": "share", "username": username, "filename": filename, "share_with": share_with}
@@ -492,42 +651,6 @@ def list_files(username):
     except Exception as e:
         logger.error(f"列出文件错误: {str(e)}")
         return {"status": "error", "message": str(e)}
-
-def edit_file(username, filename, new_content):
-    """编辑文件"""
-    new_data = base64.b64encode(new_content.encode()).decode()
-    request = {
-        "action": "edit_file",
-        "username": username,
-        "filename": filename,
-        "data": new_data
-    }
-    response = send_request(request)
-    print(f"{username} 编辑 {filename}: {response.get('message', '无消息')}")
-    return response
-
-def delete_file(username, filename):
-    """删除文件"""
-    request = {
-        "action": "delete_file",
-        "username": username,
-        "filename": filename
-    }
-    response = send_request(request)
-    print(f"{username} 删除 {filename}: {response.get('message', '无消息')}")
-    return response
-
-def share_file(username, filename, share_with):
-    """分享文件"""
-    request = {
-        "action": "share_file",
-        "username": username,
-        "filename": filename,
-        "share_with_username": share_with
-    }
-    response = send_request(request)
-    print(f"{username} 分享 {filename} 给 {share_with}: {response.get('message', '无消息')}")
-    return response
 
 def view_logs(admin_username):
     """管理员查看日志"""
@@ -648,14 +771,32 @@ def logged_in_menu(username):
             input("按回车返回...")
         
         elif choice == "5":
-            file_name = input_with_validation("请输入文件名: ")
-            new_content = input_with_validation("请输入新内容: ")
-            result = edit_file(username, file_name, new_content)
+            result = list_files(username)
+            if result.get("status") == "success":
+                files = result.get("files", [])
+                if not files:
+                    print("没有找到文件。")
+                else:
+                    print("\n文件列表:")
+                    print("-" * 50)
+                    for file in files:
+                        print(f"文件 ID: {file['file_id']}")
+                        print(f"文件名: {file['filename']}")
+                        print(f"大小: {file['file_size']} 字节")
+                        print(f"上传时间: {file['upload_date']}")
+                        print(f"最后修改: {file['last_modified']}")
+                        print("-" * 50)
+                    file_id = input_with_validation("请输入要编辑的文件 ID: ")
+                    if not file_id.isdigit():
+                        print("无效的文件 ID，必须是数字。")
+                    else:
+                        result = edit_file(username, file_id)
+            else:
+                print(f"错误: {result.get('message', '未知错误')}")
             input("按回车返回...")
         
         elif choice == "6":
-            file_name = input_with_validation("请输入文件名: ")
-            result = delete_file(username, file_name)
+            result = delete_file(username)
             input("按回车返回...")
         
         elif choice == "7":

@@ -657,22 +657,32 @@ def handle_download_file(request, ip_address=None):
 
 def handle_delete_file(request, ip_address=None):
     """
-    Handle file deletion request
+    Handle file deletion request using file_id and username (hard delete)
     """
-    session_id = request.get("session_id")
-    user_id = validate_session(session_id)
-
-    if not user_id:
-        return {"status": "error", "message": "Invalid or expired session"}
-
+    username = validate_input(request.get("username"))
     file_id = request.get("file_id")
 
-    if not file_id:
-        return {"status": "error", "message": "Missing file ID"}
+    if not username or not file_id:
+        logger.debug(f"Missing username or file ID: username={username}, file_id={file_id}")
+        return {"status": "error", "message": "Missing username or file ID"}
+
+    try:
+        file_id = int(file_id)  # Ensure file_id is integer
+    except (TypeError, ValueError):
+        logger.debug(f"Invalid file_id: {file_id}")
+        return {"status": "error", "message": "Invalid file ID"}
 
     try:
         conn = get_db_connection()
         cursor = conn.cursor()
+
+        # Get user_id from username
+        cursor.execute("SELECT user_id FROM users WHERE username = ?", (username,))
+        user = cursor.fetchone()
+        if not user:
+            logger.debug(f"User not found: username={username}")
+            return {"status": "error", "message": "User not found"}
+        user_id = user['user_id']
 
         # Check if user owns the file
         cursor.execute("""
@@ -683,26 +693,41 @@ def handle_delete_file(request, ip_address=None):
 
         file = cursor.fetchone()
         if not file:
+            logger.debug(f"File not found or not owned: file_id={file_id}, user_id={user_id}")
             return {"status": "error", "message": "File not found or you don't have permission to delete"}
 
-        # Soft delete - mark as deleted
-        cursor.execute("""
-            UPDATE files
-            SET is_deleted = 1
-            WHERE file_id = ?
-        """, (file_id,))
+        # Delete physical file
+        try:
+            if os.path.exists(file['file_path']):
+                os.remove(file['file_path'])
+                logger.info(f"Deleted physical file: {file['file_path']}")
+            else:
+                logger.warning(f"Physical file not found: {file['file_path']}")
+        except OSError as e:
+            logger.error(f"Failed to delete physical file: {file['file_path']}, error: {e}")
+            return {"status": "error", "message": f"Failed to delete file from storage: {str(e)}"}
+
+        # Delete from file_keys table
+        cursor.execute("DELETE FROM file_keys WHERE file_id = ?", (file_id,))
+
+        # Delete from files table
+        cursor.execute("DELETE FROM files WHERE file_id = ?", (file_id,))
 
         conn.commit()
 
         # Log the deletion
-        log_action(user_id, "file_delete", f"Deleted file: {file['original_filename']}", ip_address)
+        log_action(user_id, "file_delete", f"Hard deleted file: {file['original_filename']}", ip_address)
 
-        return {"status": "success", "message": "File deleted successfully"}
+        return {"status": "success", "message": "File permanently deleted"}
+    except sqlite3.Error as e:
+        logger.error(f"Database error: {e}")
+        return {"status": "error", "message": f"Database error: {str(e)}"}
     except Exception as e:
-        logger.error(f"File deletion error: {e}")
-        return {"status": "error", "message": "File deletion failed"}
+        logger.error(f"File deletion error: {type(e).__name__}: {e}")
+        return {"status": "error", "message": f"File deletion failed: {str(e)}"}
     finally:
         close_connection(conn)
+
 
 
 def handle_share_file(request, ip_address=None):
@@ -868,6 +893,78 @@ def list_user_files(request):
     finally:
         close_connection(conn)
 
+def handle_delete_file(request, ip_address=None):
+    """
+    Handle file deletion request using file_id and username (hard delete)
+    """
+    username = validate_input(request.get("username"))
+    file_id = request.get("file_id")
+
+    if not username or not file_id:
+        logger.debug(f"Missing username or file ID: username={username}, file_id={file_id}")
+        return {"status": "error", "message": "Missing username or file ID"}
+
+    try:
+        file_id = int(file_id)  # Ensure file_id is integer
+    except (TypeError, ValueError):
+        logger.debug(f"Invalid file_id: {file_id}")
+        return {"status": "error", "message": "Invalid file ID"}
+
+    try:
+        conn = get_db_connection()
+        cursor = conn.cursor()
+
+        # Get user_id from username
+        cursor.execute("SELECT user_id FROM users WHERE username = ?", (username,))
+        user = cursor.fetchone()
+        if not user:
+            logger.debug(f"User not found: username={username}")
+            return {"status": "error", "message": "User not found"}
+        user_id = user['user_id']
+
+        # Check if user owns the file
+        cursor.execute("""
+            SELECT file_id, original_filename, file_path
+            FROM files
+            WHERE file_id = ? AND owner_id = ? AND is_deleted = 0
+        """, (file_id, user_id))
+
+        file = cursor.fetchone()
+        if not file:
+            logger.debug(f"File not found or not owned: file_id={file_id}, user_id={user_id}")
+            return {"status": "error", "message": "File not found or you don't have permission to delete"}
+
+        # Delete physical file
+        try:
+            if os.path.exists(file['file_path']):
+                os.remove(file['file_path'])
+                logger.info(f"Deleted physical file: {file['file_path']}")
+            else:
+                logger.warning(f"Physical file not found: {file['file_path']}")
+        except OSError as e:
+            logger.error(f"Failed to delete physical file: {file['file_path']}, error: {e}")
+            return {"status": "error", "message": f"Failed to delete file from storage: {str(e)}"}
+
+        # Delete from file_keys table
+        cursor.execute("DELETE FROM file_keys WHERE file_id = ?", (file_id,))
+
+        # Delete from files table
+        cursor.execute("DELETE FROM files WHERE file_id = ?", (file_id,))
+
+        conn.commit()
+
+        # Log the deletion
+        log_action(user_id, "file_delete", f"Hard deleted file: {file['original_filename']}", ip_address)
+
+        return {"status": "success", "message": "File permanently deleted"}
+    except sqlite3.Error as e:
+        logger.error(f"Database error: {e}")
+        return {"status": "error", "message": f"Database error: {str(e)}"}
+    except Exception as e:
+        logger.error(f"File deletion error: {type(e).__name__}: {e}")
+        return {"status": "error", "message": f"File deletion failed: {str(e)}"}
+    finally:
+        close_connection(conn)
 
 
 def handle_view_logs(request, ip_address=None):
@@ -958,6 +1055,122 @@ def handle_logout(request, ip_address=None):
         close_connection(conn)
 
 
+def handle_edit_file(request, ip_address=None):
+    """
+    Handle file edit request for .txt files
+    """
+    username = validate_input(request.get("username"))
+    file_id = request.get("file_id")
+    encrypted_data_str = request.get("data")  # Base64-encoded encrypted package
+
+    if not username or not file_id or not encrypted_data_str:
+        logger.debug(f"Invalid input: username={username}, file_id={file_id}")
+        return {"status": "error", "message": "Missing username, file ID, or file data"}
+
+    try:
+        file_id = int(file_id)  # Ensure file_id is integer
+    except (TypeError, ValueError):
+        logger.debug(f"Invalid file_id: {file_id}")
+        return {"status": "error", "message": "Invalid file ID"}
+
+    try:
+        conn = get_db_connection()
+        cursor = conn.cursor()
+
+        # Get user_id
+        cursor.execute("SELECT user_id FROM users WHERE username = ?", (username,))
+        user = cursor.fetchone()
+        if not user:
+            logger.debug(f"User not found: username={username}")
+            return {"status": "error", "message": "User not found"}
+        user_id = user['user_id']
+
+        # Check if user owns the file and it's a .txt file
+        cursor.execute("""
+            SELECT f.file_id, f.filename, f.original_filename, f.file_path, f.owner_id, f.file_size
+            FROM files f
+            WHERE f.file_id = ? AND f.is_deleted = 0 AND f.owner_id = ?
+        """, (file_id, user_id))
+        file = cursor.fetchone()
+        if not file:
+            logger.debug(f"File not found or not owned: file_id={file_id}, user_id={user_id}")
+            return {"status": "error", "message": "File not found or not owned"}
+
+        # Get encryption key and IV
+        cursor.execute("SELECT key_encrypted, iv FROM file_keys WHERE file_id = ?", (file['file_id'],))
+        key_data = cursor.fetchone()
+        if not key_data:
+            logger.debug(f"Encryption key not found for file_id={file['file_id']}")
+            return {"status": "error", "message": "Encryption key not found"}
+
+        # Verify file type from filename
+        _, ext = os.path.splitext(file['original_filename'])
+        if ext.lower() != '.txt':
+            logger.debug(f"File is not a .txt file: file_id={file_id}, ext={ext}")
+            return {"status": "error", "message": "Only .txt files can be edited"}
+
+        # Decode new encrypted package
+        try:
+            encrypted_package_json = base64.b64decode(encrypted_data_str).decode()
+            encrypted_package = json.loads(encrypted_package_json)
+            ciphertext = base64.b64decode(encrypted_package["ciphertext"])
+            nonce = encrypted_package["nonce"]  # Base64 string
+            tag = encrypted_package["tag"]      # Base64 string
+            metadata = encrypted_package.get("metadata", {})
+        except (json.JSONDecodeError, KeyError) as e:
+            logger.error(f"Invalid encrypted package: {str(e)}")
+            return {"status": "error", "message": "Invalid encrypted package format"}
+
+        # Verify metadata consistency
+        if metadata.get("original_filename") != file['original_filename']:
+            logger.debug(f"Metadata filename mismatch: received={metadata.get('original_filename')}, expected={file['original_filename']}")
+            return {"status": "error", "message": "Filename mismatch in metadata"}
+
+        # Update file content
+        try:
+            with open(file['file_path'], 'wb') as f:
+                f.write(ciphertext)
+        except IOError as e:
+            logger.error(f"Failed to write file: {file['file_path']}, error: {e}")
+            return {"status": "error", "message": "Failed to update file content"}
+
+        # Update files table
+        cursor.execute("""
+            UPDATE files
+            SET last_modified = ?, file_size = ?
+            WHERE file_id = ?
+        """, (datetime.datetime.now(), len(ciphertext), file_id))
+
+        # Update file_keys table
+        cursor.execute("""
+            UPDATE file_keys
+            SET key_encrypted = ?, iv = ?
+            WHERE file_id = ?
+        """, (tag, nonce, file_id))
+
+        conn.commit()
+
+        # Log the edit action
+        log_action(user_id, "file_edit", f"Edited file: {file['original_filename']}", ip_address)
+
+        return {
+            "status": "success",
+            "message": "File edited successfully",
+            "file_id": file_id
+        }
+
+    except sqlite3.Error as e:
+        logger.error(f"Database error: {e}")
+        return {"status": "error", "message": f"Database error: {str(e)}"}
+    except Exception as e:
+        logger.error(f"Unexpected error: {type(e).__name__}: {e}")
+        return {"status": "error", "message": f"Unexpected error: {str(e)}"}
+    finally:
+        close_connection(conn)
+
+
+
+
 def handle_client(client_socket, addr):
     """
     Handle a client connection
@@ -1010,6 +1223,8 @@ def handle_client(client_socket, addr):
             response = handle_delete_file(request, ip_address)
         elif action == "share_file":
             response = handle_share_file(request, ip_address)
+        elif action == "edit_file":
+            response = handle_edit_file(request, ip_address)
         elif action == "list_files":
             response = list_user_files(request)
         elif action == "view_logs":
