@@ -694,6 +694,25 @@ def handle_login():
         print(f"登录失败: {result.get('message', '未知错误')}")
         return False, ""
 
+def logout_user(username):
+    """用户退出登录"""
+    # 获取会话令牌
+    session_id = get_session_token(username)
+    if not session_id:
+        return {"status": "success", "message": "Already logged out"}
+    
+    # 发送退出请求
+    request = {
+        "action": "logout",
+        "session_id": session_id
+    }
+    response = send_request(request)
+    
+    # 无论服务器响应如何，都清除本地会话
+    clear_session(username)
+    print(f"退出登录 {username}: {response.get('message', '成功')}")
+    return response
+
 def logged_in_menu(username):
     """登录后菜单"""
     while True:
@@ -811,6 +830,8 @@ def logged_in_menu(username):
         
         elif choice == "9":
             print("正在退出登录...")
+            logout_user(username)
+            input("登出已完成，按回车返回主菜单...")
             return
         
         else:

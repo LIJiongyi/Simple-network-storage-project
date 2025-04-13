@@ -508,3 +508,13 @@
 2025-04-13 16:37:06,452 - SecureStorage - INFO - Action logged: file_download by user 2
 2025-04-13 16:37:13,605 - SecureStorage - INFO - New connection from ('127.0.0.1', 57680)
 2025-04-13 16:37:13,607 - SecureStorage - INFO - Action logged: file_edit by user 2
+2025-04-13 16:54:24,081 - SecureStorage - INFO - Server started on localhost:9999
+2025-04-13 16:54:36,489 - SecureStorage - INFO - New connection from ('127.0.0.1', 58230)
+2025-04-13 16:54:36,499 - SecureStorage - INFO - Action logged: user_login by user 2
+2025-04-13 16:54:39,037 - SecureStorage - INFO - New connection from ('127.0.0.1', 58231)
+2025-04-13 16:54:39,042 - SecureStorage - INFO - Action logged: user_logout by user 2
+2025-04-13 16:59:05,332 - SecureStorage - INFO - Server started on localhost:9999
+2025-04-13 16:59:18,440 - SecureStorage - INFO - New connection from ('127.0.0.1', 58382)
+2025-04-13 16:59:18,450 - SecureStorage - INFO - Action logged: user_login by user 2
+2025-04-13 16:59:31,249 - SecureStorage - INFO - New connection from ('127.0.0.1', 58393)
+2025-04-13 16:59:31,252 - SecureStorage - INFO - Action logged: user_logout by user 2
