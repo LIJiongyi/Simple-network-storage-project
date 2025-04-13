@@ -104,7 +104,6 @@ def create_session(user_id, username):  # used for login
     expiry = current_time + SESSION_TIMEOUT
     sessions[session_id] = {"user_id": user_id, "username": username, "expiry": expiry}
     return session_id
-    return secrets.token_hex(32)
     
 def validate_session(session_id, username=None):
     """验证会话令牌有效性"""
@@ -788,11 +787,12 @@ def list_user_files(request):
     List all non-deleted files for a given user
     """
     try:
-        # 验证用户名
+        session_id = request.get("session_id")
         username = validate_input(request.get("username"))
-        if not username:
-            return {"status": "error", "message": "Invalid username"}
-
+        
+        # 验证会话有效性
+        if not validate_session(session_id, username):
+            return {"status": "error", "message": "未登录或会话已过期，请先登录"}
         # 获取数据库连接
         conn = get_db_connection()
         cursor = conn.cursor()
